@@ -10,6 +10,7 @@ from ..database import get_db
 from ..models.collaboration import Collaboration
 from ..models.influencer import Influencer
 from ..models.user import User
+from ..models.deliverable import ContentDeliverable
 from ..schemas.collaboration import (
     CollaborationCreate, 
     CollaborationUpdate, 
@@ -33,6 +34,7 @@ async def get_collaborations(
     content_type: Optional[str] = None,
     start_date_from: Optional[date] = None,
     start_date_to: Optional[date] = None,
+    has_pending: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -69,8 +71,13 @@ async def get_collaborations(
     
     if start_date_to:
         query = query.filter(Collaboration.start_date <= start_date_to)
-    
-    # Get total count
+
+    if has_pending:
+        pending_ids = db.query(ContentDeliverable.collaboration_id).filter(
+            ContentDeliverable.review_status == "pending"
+        ).distinct().subquery()
+        query = query.filter(Collaboration.id.in_(pending_ids))
+
     total = query.count()
     
     # Apply pagination

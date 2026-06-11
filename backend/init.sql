@@ -118,6 +118,22 @@ CREATE TABLE IF NOT EXISTS collaborations (
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Collaboration Deliverables table
+CREATE TABLE IF NOT EXISTS collaboration_deliverables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    collaboration_id INT NOT NULL,
+    platform VARCHAR(50),
+    content_link VARCHAR(500),
+    published_at DATETIME,
+    review_status VARCHAR(20) DEFAULT 'pending',
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_collaboration (collaboration_id),
+    INDEX idx_review_status (review_status),
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert initial roles
 INSERT INTO roles (id, name, description, permissions) VALUES
 (1, 'admin', '管理员', 'all'),

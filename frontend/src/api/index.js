@@ -169,6 +169,16 @@ export const collaborationsApi = {
   getContentTypes: () => api.get('/collaborations/content-types')
 };
 
+// Deliverables API
+export const deliverablesApi = {
+  getList: (params) => api.get('/deliverables', { params }),
+  create: (data) => api.post('/deliverables', data),
+  update: (id, data) => api.put(`/deliverables/${id}`, data),
+  delete: (id) => api.delete(`/deliverables/${id}`),
+  getReviewStatuses: () => api.get('/deliverables/review-statuses'),
+  getPlatforms: () => api.get('/deliverables/platforms')
+};
+
 // Statistics API
 export const statisticsApi = {
   getOverview: () => api.get('/statistics/overview'),

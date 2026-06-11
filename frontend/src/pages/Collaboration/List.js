@@ -6,6 +6,7 @@ import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Pagination from '../../components/Pagination';
+import DeliverableDrawer from '../../components/DeliverableDrawer';
 
 const CollaborationList = () => {
   const { user } = useAuth();
@@ -41,6 +42,14 @@ const CollaborationList = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Deliverable Drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCollabId, setDrawerCollabId] = useState(null);
+  const [drawerCollabName, setDrawerCollabName] = useState('');
+
+  // Filter: has pending deliverables
+  const [hasPending, setHasPending] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -49,6 +58,7 @@ const CollaborationList = () => {
       if (status) params.status = status;
       if (contentType) params.content_type = contentType;
       if (influencerId) params.influencer_id = influencerId;
+      if (hasPending) params.has_pending = true;
       
       const data = await collaborationsApi.getList(params);
       setCollaborations(data.items);
@@ -58,7 +68,7 @@ const CollaborationList = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, status, contentType, influencerId]);
+  }, [page, pageSize, keyword, status, contentType, influencerId, hasPending]);
 
   const fetchOptions = async () => {
     try {
@@ -103,6 +113,7 @@ const CollaborationList = () => {
     setStatus('');
     setContentType('');
     setInfluencerId('');
+    setHasPending(false);
     setPage(1);
   };
 
@@ -249,6 +260,12 @@ const CollaborationList = () => {
     return <span className={`tag ${config.class}`}>{config.label}</span>;
   };
 
+  const openDeliverableDrawer = (collabId, collabName) => {
+    setDrawerCollabId(collabId);
+    setDrawerCollabName(collabName);
+    setDrawerOpen(true);
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -315,6 +332,17 @@ const CollaborationList = () => {
             
             <button className="btn btn-primary" onClick={handleSearch}>搜索</button>
             <button className="btn btn-secondary" onClick={handleReset}>重置</button>
+            <label className="filter-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={hasPending}
+                onChange={(e) => {
+                  setHasPending(e.target.checked);
+                  setPage(1);
+                }}
+              />
+              仍有待审内容
+            </label>
           </div>
         </div>
       </div>
@@ -376,6 +404,12 @@ const CollaborationList = () => {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => openDeliverableDrawer(item.id, item.project_name)}
+                          >
+                            交付物
+                          </button>
                           <button 
                             className="btn btn-ghost btn-sm"
                             onClick={() => openEditModal(item.id)}
@@ -596,6 +630,14 @@ const CollaborationList = () => {
         message="确定要删除这个合作记录吗？此操作不可恢复。"
         type="danger"
         loading={deleting}
+      />
+
+      {/* Deliverable Drawer */}
+      <DeliverableDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        collaborationId={drawerCollabId}
+        collaborationName={drawerCollabName}
       />
     </div>
   );
