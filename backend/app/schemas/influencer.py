@@ -68,6 +68,7 @@ class InfluencerUpdate(BaseModel):
     engagement_rate: Optional[Decimal] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    change_reason: Optional[str] = None
     
     @field_validator('contact_email')
     @classmethod

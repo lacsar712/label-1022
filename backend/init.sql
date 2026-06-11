@@ -134,6 +134,21 @@ CREATE TABLE IF NOT EXISTS collaboration_deliverables (
     FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Price Histories table - 报价变更历史
+CREATE TABLE IF NOT EXISTS price_histories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    influencer_id INT NOT NULL,
+    old_price DECIMAL(12, 2) NOT NULL,
+    new_price DECIMAL(12, 2) NOT NULL,
+    change_reason TEXT,
+    operator_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_influencer (influencer_id),
+    INDEX idx_created_at (created_at),
+    FOREIGN KEY (influencer_id) REFERENCES influencers(id) ON DELETE CASCADE,
+    FOREIGN KEY (operator_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert initial roles
 INSERT INTO roles (id, name, description, permissions) VALUES
 (1, 'admin', '管理员', 'all'),
@@ -191,3 +206,13 @@ INSERT INTO collaborations (influencer_id, user_id, project_name, status, start_
 (8, 1, '在线教育平台推广', 'completed', '2024-12-01', '2024-12-31', 30000.00, 30000.00, '长视频', 'B站发布学习方法分享视频，植入平台', 420000, 35000, 4200, 8500),
 (9, 2, '品牌春节活动', 'pending', '2025-02-05', '2025-02-15', 60000.00, 0.00, '短视频', '春节主题搞笑短视频，融入品牌元素', 0, 0, 0, 0),
 (1, 1, '护肤品牌年度代言', 'in_progress', '2025-01-01', '2025-06-30', 80000.00, 40000.00, '图文', '每月发布护肤日常和产品推荐', 320000, 25000, 3200, 5800);
+
+-- Insert sample price histories - 报价变更历史示例
+INSERT INTO price_histories (influencer_id, old_price, new_price, change_reason, operator_id, created_at) VALUES
+(1, 12000.00, 15000.00, '粉丝量增长，市场需求增加', 2, '2024-11-15 10:30:00'),
+(1, 15000.00, 15000.00, '续约确认，价格维持', 2, '2025-01-20 14:00:00'),
+(2, 20000.00, 25000.00, '粉丝突破100万，进入头部达人', 2, '2024-12-01 09:15:00'),
+(3, 15000.00, 18000.00, '内容质量提升，互动率增加', 2, '2024-12-20 16:45:00'),
+(4, 30000.00, 35000.00, '年度合作报价调整', 1, '2024-11-30 11:00:00'),
+(5, 18000.00, 22000.00, '测评专业性受认可，价格调整', 2, '2025-01-10 15:20:00'),
+(9, 40000.00, 50000.00, '粉丝量大幅增长，平台影响力提升', 2, '2024-12-15 13:30:00');

@@ -34,3 +34,4 @@ class Influencer(Base):
     category = relationship("Category", back_populates="influencers")
     tier = relationship("Tier", back_populates="influencers")
     collaborations = relationship("Collaboration", back_populates="influencer")
+    price_histories = relationship("PriceHistory", back_populates="influencer", cascade="all, delete-orphan")

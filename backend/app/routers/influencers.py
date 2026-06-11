@@ -5,17 +5,23 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from typing import List, Optional
+from decimal import Decimal
 from ..database import get_db
 from ..models.influencer import Influencer
 from ..models.category import Category
 from ..models.tier import Tier
 from ..models.collaboration import Collaboration
 from ..models.user import User
+from ..models.price_history import PriceHistory
 from ..schemas.influencer import (
     InfluencerCreate, 
     InfluencerUpdate, 
     InfluencerResponse,
     InfluencerListResponse
+)
+from ..schemas.price_history import (
+    PriceHistoryResponse,
+    PriceHistoryListResponse
 )
 from ..utils.security import get_current_user, get_operator_or_admin
 from ..utils.logger import logger
@@ -241,6 +247,60 @@ async def get_influencer(
     )
 
 
+@router.get("/{influencer_id}/price-history", response_model=PriceHistoryListResponse, summary="获取报价历史记录")
+async def get_price_history(
+    influencer_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_operator_or_admin)
+):
+    """获取报价历史记录 - 仅运营和管理员可访问"""
+    influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
+    if not influencer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Influencer不存在"
+        )
+    
+    histories = db.query(PriceHistory).options(
+        joinedload(PriceHistory.operator)
+    ).filter(
+        PriceHistory.influencer_id == influencer_id
+    ).order_by(PriceHistory.created_at.desc()).all()
+    
+    items = []
+    for h in histories:
+        operator_brief = None
+        if h.operator:
+            operator_brief = {
+                "id": h.operator.id,
+                "username": h.operator.username,
+                "nickname": h.operator.nickname
+            }
+        
+        change_amount = h.new_price - h.old_price
+        change_percent = Decimal('0')
+        if h.old_price != 0:
+            change_percent = ((h.new_price - h.old_price) / h.old_price * 100).quantize(Decimal('0.01'))
+        
+        items.append(PriceHistoryResponse(
+            id=h.id,
+            influencer_id=h.influencer_id,
+            old_price=h.old_price,
+            new_price=h.new_price,
+            change_reason=h.change_reason,
+            operator_id=h.operator_id,
+            created_at=h.created_at,
+            operator=operator_brief,
+            change_amount=change_amount,
+            change_percent=change_percent
+        ))
+    
+    return PriceHistoryListResponse(
+        items=items,
+        total=len(items)
+    )
+
+
 @router.put("/{influencer_id}", response_model=InfluencerResponse, summary="更新Influencer")
 async def update_influencer(
     influencer_id: int,
@@ -248,7 +308,7 @@ async def update_influencer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_operator_or_admin)
 ):
-    """更新Influencer"""
+    """更新Influencer - 报价变更时自动记录历史"""
     influencer = db.query(Influencer).filter(Influencer.id == influencer_id).first()
     if not influencer:
         raise HTTPException(
@@ -268,7 +328,6 @@ async def update_influencer(
     # Check tier exists if provided
     if influencer_data.tier_id is not None:
         if influencer_data.tier_id == 0:
-            # Allow setting to null
             pass
         else:
             tier = db.query(Tier).filter(Tier.id == influencer_data.tier_id).first()
@@ -279,16 +338,34 @@ async def update_influencer(
                 )
     
     update_data = influencer_data.model_dump(exclude_unset=True)
-    # Handle setting tier_id to null
+    change_reason = update_data.pop('change_reason', None)
+    
     if 'tier_id' in update_data and update_data['tier_id'] == 0:
         update_data['tier_id'] = None
+    
+    old_cost_per_post = influencer.cost_per_post
+    
     for field, value in update_data.items():
         setattr(influencer, field, value)
+    
+    if 'cost_per_post' in update_data and update_data['cost_per_post'] != old_cost_per_post:
+        price_history = PriceHistory(
+            influencer_id=influencer_id,
+            old_price=old_cost_per_post,
+            new_price=update_data['cost_per_post'],
+            change_reason=change_reason,
+            operator_id=current_user.id
+        )
+        db.add(price_history)
+        logger.info(
+            f"Price changed for influencer {influencer.name}: "
+            f"{old_cost_per_post} -> {update_data['cost_per_post']} "
+            f"by {current_user.username}. Reason: {change_reason or 'N/A'}"
+        )
     
     db.commit()
     db.refresh(influencer)
     
-    # Reload with category and tier
     influencer = db.query(Influencer).options(
         joinedload(Influencer.category),
         joinedload(Influencer.tier)
@@ -338,7 +415,6 @@ async def delete_influencer(
             detail="Influencer不存在"
         )
     
-    # Check for collaborations
     collab_count = db.query(Collaboration).filter(Collaboration.influencer_id == influencer_id).count()
     if collab_count > 0:
         raise HTTPException(

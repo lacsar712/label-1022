@@ -19,6 +19,7 @@ from .models.tier import Tier
 from .models.influencer import Influencer
 from .models.collaboration import Collaboration
 from .models.deliverable import ContentDeliverable
+from .models.price_history import PriceHistory
 
 
 @asynccontextmanager

@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts';
 import { influencersApi, collaborationsApi } from '../../api';
 import { useAuth, isOperator } from '../../contexts/AuthContext';
 
@@ -8,10 +18,13 @@ const InfluencerDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const canEdit = isOperator(user);
+  const canViewPriceHistory = isOperator(user);
   
   const [loading, setLoading] = useState(true);
   const [influencer, setInfluencer] = useState(null);
   const [collaborations, setCollaborations] = useState([]);
+  const [priceHistory, setPriceHistory] = useState([]);
+  const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -26,11 +39,26 @@ const InfluencerDetail = () => {
       ]);
       setInfluencer(infData);
       setCollaborations(collabData.items);
+      
+      if (canViewPriceHistory) {
+        fetchPriceHistory();
+      }
     } catch (error) {
-      // Handled by interceptor
       navigate('/influencers');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPriceHistory = async () => {
+    try {
+      setPriceHistoryLoading(true);
+      const data = await influencersApi.getPriceHistory(id);
+      setPriceHistory(data.items);
+    } catch (error) {
+      console.error('Failed to fetch price history:', error);
+    } finally {
+      setPriceHistoryLoading(false);
     }
   };
 
@@ -43,6 +71,52 @@ const InfluencerDetail = () => {
 
   const formatMoney = (num) => {
     return '¥' + (num?.toLocaleString() || '0');
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const buildChartData = () => {
+    if (!influencer) return [];
+    
+    const data = [];
+    
+    data.push({
+      date: formatDate(influencer.created_at),
+      time: influencer.created_at,
+      price: Number(influencer.cost_per_post),
+      label: '初始报价'
+    });
+    
+    const sortedHistory = [...priceHistory].sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
+    );
+    
+    sortedHistory.forEach((h) => {
+      data.push({
+        date: formatDate(h.created_at),
+        time: h.created_at,
+        price: Number(h.new_price),
+        label: h.change_reason || '价格调整'
+      });
+    });
+    
+    return data;
   };
 
   const getStatusTag = (status) => {
@@ -94,6 +168,26 @@ const InfluencerDetail = () => {
     );
   };
 
+  const getChangeTag = (amount) => {
+    const num = Number(amount);
+    if (num > 0) {
+      return <span style={{ color: '#f5222d', fontWeight: '500' }}>↑ +¥{num.toLocaleString()}</span>;
+    } else if (num < 0) {
+      return <span style={{ color: '#52c41a', fontWeight: '500' }}>↓ -¥{Math.abs(num).toLocaleString()}</span>;
+    }
+    return <span style={{ color: 'var(--text-tertiary)' }}>— 持平</span>;
+  };
+
+  const getChangePercentTag = (percent) => {
+    const num = Number(percent);
+    if (num > 0) {
+      return <span style={{ color: '#f5222d' }}>+{num}%</span>;
+    } else if (num < 0) {
+      return <span style={{ color: '#52c41a' }}>{num}%</span>;
+    }
+    return <span style={{ color: 'var(--text-tertiary)' }}>0%</span>;
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -114,7 +208,6 @@ const InfluencerDetail = () => {
     );
   }
 
-  // Calculate statistics
   const totalCollabs = collaborations.length;
   const completedCollabs = collaborations.filter(c => c.status === 'completed').length;
   const totalBudget = collaborations.reduce((sum, c) => sum + (c.budget || 0), 0);
@@ -122,9 +215,17 @@ const InfluencerDetail = () => {
   const totalViews = collaborations.reduce((sum, c) => sum + (c.views || 0), 0);
   const totalLikes = collaborations.reduce((sum, c) => sum + (c.likes || 0), 0);
 
+  const chartData = buildChartData();
+  const highestPrice = priceHistory.length > 0
+    ? Math.max(...chartData.map(d => d.price))
+    : Number(influencer.cost_per_post);
+  const lowestPrice = priceHistory.length > 0
+    ? Math.min(...chartData.map(d => d.price))
+    : Number(influencer.cost_per_post);
+  const totalChangeCount = priceHistory.filter(h => Number(h.change_amount) !== 0).length;
+
   return (
     <div>
-      {/* Back Button */}
       <button 
         className="btn btn-ghost" 
         onClick={() => navigate('/influencers')}
@@ -133,7 +234,6 @@ const InfluencerDetail = () => {
         ← 返回列表
       </button>
 
-      {/* Profile Header */}
       <div className="detail-header">
         <div className="detail-avatar">
           {influencer.name?.[0]}
@@ -191,9 +291,7 @@ const InfluencerDetail = () => {
         </div>
       </div>
 
-      {/* Info Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', marginBottom: '24px' }}>
-        {/* Contact Info */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">联系方式</h3>
@@ -234,7 +332,6 @@ const InfluencerDetail = () => {
           </div>
         </div>
 
-        {/* Collaboration Stats */}
         <div className="card">
           <div className="card-header">
             <h3 className="card-title">合作统计</h3>
@@ -270,7 +367,136 @@ const InfluencerDetail = () => {
         </div>
       </div>
 
-      {/* Tags */}
+      {canViewPriceHistory && (
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card-header">
+            <h3 className="card-title">📈 报价走势</h3>
+            <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
+              <span>
+                <span style={{ color: 'var(--text-secondary)' }}>历史最高：</span>
+                <span style={{ color: '#f5222d', fontWeight: '600' }}>{formatMoney(highestPrice)}</span>
+              </span>
+              <span>
+                <span style={{ color: 'var(--text-secondary)' }}>历史最低：</span>
+                <span style={{ color: '#52c41a', fontWeight: '600' }}>{formatMoney(lowestPrice)}</span>
+              </span>
+              <span>
+                <span style={{ color: 'var(--text-secondary)' }}>调价次数：</span>
+                <span style={{ color: 'var(--primary-color)', fontWeight: '600' }}>{totalChangeCount}</span>
+              </span>
+            </div>
+          </div>
+          <div className="card-body">
+            {chartData.length <= 1 ? (
+              <div className="empty-state" style={{ padding: '40px 20px' }}>
+                <div className="empty-icon">📊</div>
+                <div className="empty-title">暂无报价变动记录</div>
+                <div style={{ color: 'var(--text-tertiary)', fontSize: '14px', marginTop: '8px' }}>
+                  当前报价为 {formatMoney(influencer.cost_per_post)}，后续调价将自动记录
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ height: '300px', marginBottom: '24px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="var(--text-secondary)"
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis 
+                        stroke="var(--text-secondary)"
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(v) => '¥' + (v / 1000).toFixed(0) + 'k'}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-primary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                        labelStyle={{ color: 'var(--text-primary)', fontWeight: '600' }}
+                        formatter={(value) => [`¥${Number(value).toLocaleString()}`, '报价']}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        name="单条报价"
+                        stroke="#1890ff"
+                        strokeWidth={3}
+                        dot={{ fill: '#1890ff', r: 6, strokeWidth: 2, stroke: '#fff' }}
+                        activeDot={{ r: 8, fill: '#1890ff', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '15px', color: 'var(--text-primary)' }}>
+                  报价变更明细
+                </h4>
+                {priceHistoryLoading ? (
+                  <div className="loading" style={{ minHeight: '120px' }}>
+                    <div className="spinner"></div>
+                  </div>
+                ) : priceHistory.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '24px' }}>
+                    <div className="empty-title" style={{ fontSize: '14px' }}>暂无变更明细</div>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>变更时间</th>
+                          <th>变更前</th>
+                          <th>变更后</th>
+                          <th>变动金额</th>
+                          <th>变动幅度</th>
+                          <th>操作人</th>
+                          <th>变更背景</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {priceHistory.map((h) => (
+                          <tr key={h.id}>
+                            <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>
+                              {formatDateTime(h.created_at)}
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)' }}>
+                              {formatMoney(h.old_price)}
+                            </td>
+                            <td style={{ fontWeight: '500' }}>
+                              {formatMoney(h.new_price)}
+                            </td>
+                            <td>{getChangeTag(h.change_amount)}</td>
+                            <td>{getChangePercentTag(h.change_percent)}</td>
+                            <td>
+                              {h.operator 
+                                ? (h.operator.nickname || h.operator.username) 
+                                : '-'}
+                            </td>
+                            <td style={{ 
+                              maxWidth: '250px', 
+                              color: h.change_reason ? 'var(--text-secondary)' : 'var(--text-tertiary)'
+                            }}>
+                              {h.change_reason || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {influencer.tags && (
         <div className="card" style={{ marginBottom: '24px' }}>
           <div className="card-header">
@@ -286,7 +512,6 @@ const InfluencerDetail = () => {
         </div>
       )}
 
-      {/* Notes */}
       {influencer.notes && (
         <div className="card" style={{ marginBottom: '24px' }}>
           <div className="card-header">
@@ -300,7 +525,6 @@ const InfluencerDetail = () => {
         </div>
       )}
 
-      {/* Collaboration History */}
       <div className="card">
         <div className="card-header">
           <h3 className="card-title">合作记录</h3>

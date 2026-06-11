@@ -154,7 +154,8 @@ export const influencersApi = {
   create: (data) => api.post('/influencers', data),
   update: (id, data) => api.put(`/influencers/${id}`, data),
   delete: (id) => api.delete(`/influencers/${id}`),
-  getPlatforms: () => api.get('/influencers/platforms')
+  getPlatforms: () => api.get('/influencers/platforms'),
+  getPriceHistory: (id) => api.get(`/influencers/${id}/price-history`)
 };
 
 // Collaborations API
