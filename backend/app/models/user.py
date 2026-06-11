@@ -31,9 +31,11 @@ class User(Base):
     nickname = Column(String(50))
     avatar = Column(String(255))
     role_id = Column(Integer, ForeignKey("roles.id"), default=3)
+    brand_id = Column(Integer, ForeignKey("brands.id"), nullable=True)
     status = Column(String(20), default="active")  # active, inactive
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     role = relationship("Role", back_populates="users")
+    brand = relationship("Brand", back_populates="users")
     collaborations = relationship("Collaboration", back_populates="creator")

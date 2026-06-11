@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, getDashboardRoute } from '../contexts/AuthContext';
 import { authApi } from '../api';
 import { showToast } from '../components/Toast';
 
@@ -87,7 +87,8 @@ const Login = () => {
         // Small delay to ensure localStorage is fully committed
         await new Promise(resolve => setTimeout(resolve, 50));
         
-        navigate('/dashboard');
+        const targetRoute = getDashboardRoute(data.user);
+        navigate(targetRoute);
       }
     } catch (error) {
       // Error already handled by interceptor
@@ -242,6 +243,9 @@ const Login = () => {
               <div>管理员: admin / 123456</div>
               <div>运营人员: operator / 123456</div>
               <div>普通用户: user / 123456</div>
+              <div style={{ marginTop: '6px', color: 'var(--primary-color)', fontWeight: '500' }}>
+                品牌方: brand_meiji / 123456
+              </div>
             </div>
           </div>
         )}

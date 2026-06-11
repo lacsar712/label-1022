@@ -19,6 +19,15 @@ class RoleResponse(RoleBase):
         from_attributes = True
 
 
+class BrandBrief(BaseModel):
+    id: int
+    name: str
+    industry: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: Optional[str] = None
@@ -85,10 +94,12 @@ class UserResponse(BaseModel):
     nickname: Optional[str] = None
     avatar: Optional[str] = None
     role_id: int
+    brand_id: Optional[int] = None
     status: str
     created_at: datetime
     updated_at: Optional[datetime] = None
     role: Optional[RoleResponse] = None
+    brand: Optional[BrandBrief] = None
     
     class Config:
         from_attributes = True

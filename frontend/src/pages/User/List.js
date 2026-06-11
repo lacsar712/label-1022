@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { usersApi } from '../../api';
+import { usersApi, brandsApi } from '../../api';
 import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Pagination from '../../components/Pagination';
+import { getRoleLabel } from '../../contexts/AuthContext';
 
 const UserList = () => {
   const [loading, setLoading] = useState(true);
@@ -12,19 +13,19 @@ const UserList = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [roles, setRoles] = useState([]);
+  const [brands, setBrands] = useState([]);
   
-  // Modal
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   
-  // Delete
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchRoles();
+    fetchBrands();
   }, []);
 
   useEffect(() => {
@@ -35,6 +36,15 @@ const UserList = () => {
     try {
       const data = await usersApi.getRoles();
       setRoles(data);
+    } catch (error) {
+      // Handled by interceptor
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      const data = await brandsApi.getList({ page_size: 100 });
+      setBrands(data.items || []);
     } catch (error) {
       // Handled by interceptor
     }
@@ -57,7 +67,8 @@ const UserList = () => {
     setEditingId(user.id);
     setFormData({
       role_id: user.role_id,
-      status: user.status
+      status: user.status,
+      brand_id: user.brand_id || ''
     });
     setShowModal(true);
   };
@@ -66,15 +77,17 @@ const UserList = () => {
     try {
       setSaving(true);
       
-      // Update role
       if (formData.role_id) {
         await usersApi.updateRole(editingId, { role_id: parseInt(formData.role_id) });
       }
       
-      // Update status
       if (formData.status) {
         await usersApi.updateStatus(editingId, { status: formData.status });
       }
+
+      const isBrandRole = roles.find(r => r.id === parseInt(formData.role_id))?.name === 'brand';
+      const newBrandId = isBrandRole && formData.brand_id ? parseInt(formData.brand_id) : null;
+      await usersApi.updateBrand(editingId, { brand_id: newBrandId });
       
       showToast('success', '更新成功');
       setShowModal(false);
@@ -100,20 +113,6 @@ const UserList = () => {
     }
   };
 
-  const getRoleName = (roleId) => {
-    const role = roles.find(r => r.id === roleId);
-    return role ? role.name : roleId;
-  };
-
-  const getRoleLabel = (roleName) => {
-    switch (roleName) {
-      case 'admin': return '管理员';
-      case 'operator': return '运营人员';
-      case 'user': return '普通用户';
-      default: return roleName;
-    }
-  };
-
   const getStatusTag = (status) => {
     const map = {
       active: { label: '正常', class: 'tag-success' },
@@ -123,14 +122,17 @@ const UserList = () => {
     return <span className={`tag ${config.class}`}>{config.label}</span>;
   };
 
+  const selectedRoleName = formData.role_id
+    ? roles.find(r => r.id === parseInt(formData.role_id))?.name
+    : null;
+  const showBrandField = selectedRoleName === 'brand';
+
   return (
     <div>
-      {/* Page Header */}
       <div className="page-header">
         <h2 className="page-title">用户管理</h2>
       </div>
 
-      {/* List */}
       <div className="card">
         <div className="card-body" style={{ padding: 0 }}>
           {loading ? (
@@ -146,6 +148,7 @@ const UserList = () => {
                     <th>昵称</th>
                     <th>邮箱</th>
                     <th>角色</th>
+                    <th>所属品牌</th>
                     <th>状态</th>
                     <th>注册时间</th>
                     <th>操作</th>
@@ -165,9 +168,16 @@ const UserList = () => {
                       <td>{user.nickname || '-'}</td>
                       <td>{user.email || '-'}</td>
                       <td>
-                        <span className="tag tag-primary">
+                        <span className={`tag ${user.role?.name === 'admin' ? 'tag-primary' : 'tag-gray'}`}>
                           {getRoleLabel(user.role?.name)}
                         </span>
+                      </td>
+                      <td>
+                        {user.brand ? (
+                          <span className="tag tag-secondary">🏢 {user.brand.name}</span>
+                        ) : (
+                          <span style={{ color: 'var(--text-tertiary)' }}>-</span>
+                        )}
                       </td>
                       <td>{getStatusTag(user.status)}</td>
                       <td>{new Date(user.created_at).toLocaleDateString()}</td>
@@ -209,7 +219,6 @@ const UserList = () => {
         )}
       </div>
 
-      {/* Edit Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -235,6 +244,30 @@ const UserList = () => {
             ))}
           </select>
         </div>
+
+        {showBrandField && (
+          <div className="form-group">
+            <label className="form-label">
+              所属品牌
+              <span style={{ color: 'var(--error-color)', marginLeft: '4px' }}>*</span>
+            </label>
+            <select
+              className="form-select"
+              value={formData.brand_id || ''}
+              onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
+            >
+              <option value="">请选择品牌</option>
+              {brands.map(b => (
+                <option key={b.id} value={b.id}>🏢 {b.name}</option>
+              ))}
+            </select>
+            {brands.length === 0 && (
+              <div style={{ fontSize: '12px', color: 'var(--warning-color)', marginTop: '6px' }}>
+                ⚠️ 暂无品牌数据，请先在品牌管理中创建品牌
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="form-group">
           <label className="form-label">状态</label>
@@ -249,7 +282,6 @@ const UserList = () => {
         </div>
       </Modal>
 
-      {/* Delete Confirm */}
       <ConfirmDialog
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}

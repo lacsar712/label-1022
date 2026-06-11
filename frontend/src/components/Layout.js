@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth, isAdmin, isOperator } from '../contexts/AuthContext';
+import { useAuth, isAdmin, isOperator, getRoleLabel } from '../contexts/AuthContext';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -39,6 +39,7 @@ const Layout = () => {
     if (path.startsWith('/categories')) return '分类管理';
     if (path.startsWith('/tiers')) return '达人等级管理';
     if (path.startsWith('/users')) return '用户管理';
+    if (path.startsWith('/brands')) return '品牌方管理';
     if (path.startsWith('/profile')) return '个人中心';
     return '';
   };
@@ -62,20 +63,13 @@ const Layout = () => {
     {
       section: '系统管理',
       items: [
+        { path: '/brands', icon: '🏢', label: '品牌方管理', roles: ['admin'] },
         { path: '/users', icon: '👥', label: '用户管理', roles: ['admin'] }
       ]
     }
   ];
 
   const userRole = user?.role?.name;
-  const getRoleLabel = (roleName) => {
-    switch (roleName) {
-      case 'admin': return '管理员';
-      case 'operator': return '运营人员';
-      case 'user': return '普通用户';
-      default: return roleName;
-    }
-  };
 
   return (
     <div className="app-layout">

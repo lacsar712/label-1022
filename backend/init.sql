@@ -149,11 +149,49 @@ CREATE TABLE IF NOT EXISTS price_histories (
     FOREIGN KEY (operator_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert initial roles
+-- Brands table - 品牌方
+CREATE TABLE IF NOT EXISTS brands (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    industry VARCHAR(100),
+    contact_name VARCHAR(50),
+    contact_phone VARCHAR(20),
+    contact_email VARCHAR(100),
+    logo VARCHAR(255),
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_name (name),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Brand Collaboration Authorizations table - 品牌方授权可见的合作
+CREATE TABLE IF NOT EXISTS brand_collaboration_authorizations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    brand_id INT NOT NULL,
+    collaboration_id INT NOT NULL,
+    granted_by INT,
+    notes VARCHAR(500),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_brand (brand_id),
+    INDEX idx_collaboration (collaboration_id),
+    UNIQUE KEY uk_brand_collaboration (brand_id, collaboration_id),
+    FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE,
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
+    FOREIGN KEY (granted_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add brand_id column to users table if not exists
+-- Note: This is handled by the ALTER TABLE below for existing installations
+
+-- Insert initial roles - add brand role
 INSERT INTO roles (id, name, description, permissions) VALUES
 (1, 'admin', '管理员', 'all'),
 (2, 'operator', '运营人员', 'influencers,collaborations,categories'),
-(3, 'user', '普通用户', 'read');
+(3, 'user', '普通用户', 'read'),
+(4, 'brand', '品牌方客户', 'brand_portal,read_authorized')
+ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), permissions=VALUES(permissions);
 
 -- Insert initial admin user (password: 123456)
 INSERT INTO users (username, password_hash, nickname, email, role_id, status) VALUES
@@ -216,3 +254,25 @@ INSERT INTO price_histories (influencer_id, old_price, new_price, change_reason,
 (4, 30000.00, 35000.00, '年度合作报价调整', 1, '2024-11-30 11:00:00'),
 (5, 18000.00, 22000.00, '测评专业性受认可，价格调整', 2, '2025-01-10 15:20:00'),
 (9, 40000.00, 50000.00, '粉丝量大幅增长，平台影响力提升', 2, '2024-12-15 13:30:00');
+
+-- Insert sample brands - 品牌方示例
+INSERT INTO brands (name, industry, contact_name, contact_phone, contact_email, description, status) VALUES
+('美肌美妆集团', '美妆护肤', '李品牌', '13900139001', 'brand@meiji.com', '国内知名美妆护肤品牌，旗下拥有多个护肤和彩妆产品线', 'active'),
+('潮牌服饰有限公司', '时尚服饰', '王品牌', '13900139002', 'brand@fashion.com', '潮流男装品牌，主打年轻时尚市场', 'active'),
+('美味餐饮连锁', '餐饮美食', '陈品牌', '13900139003', 'brand@foodie.com', '全国连锁餐饮企业，拥有200+门店', 'active');
+
+-- Insert sample brand users - 品牌方用户示例 (password: 123456)
+INSERT INTO users (username, password_hash, nickname, email, role_id, brand_id, status) VALUES
+('brand_meiji', '$2b$12$b2w3HFknNkunYeCTS1jmyuieCSCViQWQbjSYlN5NuxtIx2H0KeM7e', '美肌美妆-张经理', 'zhang@meiji.com', 4, 1, 'active'),
+('brand_fashion', '$2b$12$b2w3HFknNkunYeCTS1jmyuieCSCViQWQbjSYlN5NuxtIx2H0KeM7e', '潮牌服饰-李总监', 'li@fashion.com', 4, 2, 'active'),
+('brand_foodie', '$2b$12$b2w3HFknNkunYeCTS1jmyuieCSCViQWQbjSYlN5NuxtIx2H0KeM7e', '美味餐饮-王市场', 'wang@foodie.com', 4, 3, 'active');
+
+-- Insert sample brand-collaboration authorizations - 品牌方授权合作示例
+-- 美肌美妆授权可见的合作: 春季新品口红推广(1)、护肤品牌年度代言(10)
+INSERT INTO brand_collaboration_authorizations (brand_id, collaboration_id, granted_by, notes) VALUES
+(1, 1, 1, '2025春季口红推广授权'),
+(1, 10, 1, '年度护肤代言合作授权'),
+-- 潮牌服饰授权可见的合作: 男装品牌联名活动(2)
+(2, 2, 1, '2025春季联名活动授权'),
+-- 美味餐饮授权可见的合作: 餐厅开业推广(3)
+(3, 3, 1, '新店开业推广授权');

@@ -38,3 +38,8 @@ class Collaboration(Base):
         cascade="all, delete-orphan",
         order_by="ContentDeliverable.created_at.desc()"
     )
+    brand_authorizations = relationship(
+        "BrandCollaborationAuthorization",
+        back_populates="collaboration",
+        cascade="all, delete-orphan"
+    )

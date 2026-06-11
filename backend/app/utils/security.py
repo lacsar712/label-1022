@@ -120,3 +120,46 @@ async def get_operator_or_admin(current_user: User = Depends(get_current_user)) 
             detail="需要运营人员或管理员权限"
         )
     return current_user
+
+
+async def get_admin_or_operator_user(current_user: User = Depends(get_current_user)) -> User:
+    """Require admin or operator role - alias for consistency"""
+    return await get_operator_or_admin(current_user)
+
+
+def is_brand_user(user: User) -> bool:
+    """Check if user is a brand role user"""
+    return user.role is not None and user.role.name == "brand"
+
+
+def mask_phone(phone: str) -> str:
+    """Mask phone number - show only first 3 and last 4 digits"""
+    if not phone or len(phone) < 7:
+        return phone
+    return phone[:3] + "****" + phone[-4:]
+
+
+def mask_email(email: str) -> str:
+    """Mask email - show only first 2 chars of username"""
+    if not email or "@" not in email:
+        return email
+    username, domain = email.split("@", 1)
+    if len(username) <= 2:
+        masked_username = username + "**"
+    else:
+        masked_username = username[:2] + "***"
+    return masked_username + "@" + domain
+
+
+def mask_wechat(wechat: str) -> str:
+    """Mask wechat ID - show only first 2 and last 2 chars"""
+    if not wechat or len(wechat) <= 4:
+        return wechat
+    return wechat[:2] + "****" + wechat[-2:]
+
+
+def mask_contact_name(name: str) -> str:
+    """Mask contact name - show only last name"""
+    if not name or len(name) <= 1:
+        return name
+    return "*" + name[1:]

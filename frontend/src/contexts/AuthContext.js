@@ -82,3 +82,22 @@ export const hasRole = (user, roles) => {
 
 export const isAdmin = (user) => hasRole(user, 'admin');
 export const isOperator = (user) => hasRole(user, ['admin', 'operator']);
+export const isBrandUser = (user) => hasRole(user, 'brand');
+export const isInternalUser = (user) => hasRole(user, ['admin', 'operator', 'user']);
+
+export const getDashboardRoute = (user) => {
+  if (isBrandUser(user)) {
+    return '/brand/dashboard';
+  }
+  return '/dashboard';
+};
+
+export const getRoleLabel = (roleName) => {
+  switch (roleName) {
+    case 'admin': return '管理员';
+    case 'operator': return '运营人员';
+    case 'user': return '普通用户';
+    case 'brand': return '品牌方';
+    default: return roleName;
+  }
+};

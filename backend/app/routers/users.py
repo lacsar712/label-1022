@@ -2,7 +2,7 @@
 Users Router - User Management
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ..database import get_db
 from ..models.user import User, Role
@@ -14,6 +14,7 @@ from ..schemas.user import (
     PasswordChange,
     RoleResponse
 )
+from ..schemas.brand import UserBrandAssign
 from ..utils.security import (
     get_current_user, 
     get_admin_user, 
@@ -40,7 +41,7 @@ async def get_users(
     - 支持分页
     - 支持按关键词、角色、状态筛选
     """
-    query = db.query(User)
+    query = db.query(User).options(joinedload(User.role), joinedload(User.brand))
     
     if keyword:
         query = query.filter(
@@ -250,3 +251,48 @@ async def delete_user(
     logger.info(f"User deleted: {user.username} by admin {current_user.username}")
     
     return {"message": "用户已删除"}
+
+
+@router.put("/{user_id}/brand", response_model=UserResponse, summary="分配/取消用户品牌方关联")
+async def update_user_brand(
+    user_id: int,
+    brand_data: UserBrandAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_admin_user)
+):
+    """
+    分配或取消用户关联的品牌方（管理员）
+    - 设为 brand 角色的用户必须关联有效的 brand_id
+    - 取消关联时 brand_id 传 null
+    """
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="不能修改自己的品牌关联"
+        )
+    
+    user = db.query(User).options(joinedload(User.role), joinedload(User.brand)).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="用户不存在"
+        )
+    
+    # 如果分配了品牌方，检查品牌是否存在
+    if brand_data.brand_id is not None:
+        from ..models.brand import Brand
+        brand = db.query(Brand).filter(Brand.id == brand_data.brand_id).first()
+        if not brand:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="品牌方不存在"
+            )
+    
+    user.brand_id = brand_data.brand_id
+    db.commit()
+    db.refresh(user)
+    
+    brand_name = f"ID={brand_data.brand_id}" if brand_data.brand_id else "无"
+    logger.info(f"User brand updated: {user.username} -> {brand_name} by admin {current_user.username}")
+    
+    return user

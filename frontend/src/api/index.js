@@ -117,6 +117,7 @@ export const usersApi = {
   update: (id, data) => api.put(`/users/${id}`, data),
   updateRole: (id, data) => api.put(`/users/${id}/role`, data),
   updateStatus: (id, data) => api.put(`/users/${id}/status`, data),
+  updateBrand: (id, data) => api.put(`/users/${id}/brand`, data),
   delete: (id) => api.delete(`/users/${id}`),
   getRoles: () => api.get('/users/roles')
 };
@@ -189,6 +190,29 @@ export const statisticsApi = {
   getMonthlyTrends: (months) => api.get('/statistics/monthly-trends', { params: { months } }),
   getTopInfluencers: (params) => api.get('/statistics/top-influencers', { params }),
   getRecentCollaborations: (limit) => api.get('/statistics/recent-collaborations', { params: { limit } })
+};
+
+// Brands API - 品牌方管理（管理员）
+export const brandsApi = {
+  getList: (params) => api.get('/brands', { params }),
+  getById: (id) => api.get(`/brands/${id}`),
+  create: (data) => api.post('/brands', data),
+  update: (id, data) => api.put(`/brands/${id}`, data),
+  delete: (id) => api.delete(`/brands/${id}`),
+  getAuthorizations: (brandId) => api.get(`/brands/${brandId}/authorizations`),
+  createAuthorizations: (brandId, data) => api.post(`/brands/${brandId}/authorizations`, data),
+  deleteAuthorization: (brandId, authId) => api.delete(`/brands/${brandId}/authorizations/${authId}`)
+};
+
+// Brand Portal API - 品牌方门户（品牌方角色）
+export const brandPortalApi = {
+  getOverview: () => api.get('/brand-portal/overview'),
+  getCollaborations: (params) => api.get('/brand-portal/collaborations', { params }),
+  getCollaborationById: (id) => api.get(`/brand-portal/collaborations/${id}`),
+  getInfluencers: (params) => api.get('/brand-portal/influencers', { params }),
+  getCampaignProgress: (params) => api.get('/brand-portal/campaign-progress', { params }),
+  getStatusDistribution: () => api.get('/brand-portal/status-distribution'),
+  getEngagementTrend: () => api.get('/brand-portal/engagement-trend')
 };
 
 export default api;
