@@ -245,3 +245,112 @@ async def get_recent_collaborations(
         "budget": float(c.budget),
         "created_at": c.created_at.isoformat()
     } for c in collaborations]
+
+
+@router.get("/operator-kpi", summary="获取运营人员 KPI 统计")
+async def get_operator_kpi(
+    year: int = Query(..., description="年份"),
+    month: int = Query(..., description="月份", ge=1, le=12),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取指定月份各运营人员的 KPI 统计数据"""
+    from sqlalchemy.orm import joinedload
+    
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+    
+    status_labels = {
+        "pending": "待开始",
+        "in_progress": "进行中",
+        "completed": "已完成",
+        "cancelled": "已取消"
+    }
+    
+    operators = db.query(User).filter(
+        User.status == "active"
+    ).all()
+    
+    operator_stats = []
+    
+    for operator in operators:
+        collabs_query = db.query(Collaboration).options(
+            joinedload(Collaboration.influencer)
+        ).filter(
+            Collaboration.user_id == operator.id,
+            Collaboration.created_at >= start_date,
+            Collaboration.created_at < end_date
+        )
+        
+        collabs = collabs_query.all()
+        collab_count = len(collabs)
+        
+        completed_collabs = [c for c in collabs if c.status == "completed"]
+        completed_count = len(completed_collabs)
+        
+        total_budget = sum(float(c.budget or 0) for c in collabs)
+        total_cost = sum(float(c.actual_cost or 0) for c in collabs)
+        total_views = sum(c.views or 0 for c in collabs)
+        
+        avg_cpm = 0
+        if total_views > 0 and total_cost > 0:
+            avg_cpm = (total_cost / total_views) * 1000
+        
+        completion_rate = 0
+        if collab_count > 0:
+            completion_rate = round((completed_count / collab_count) * 100, 1)
+        
+        collab_list = []
+        for c in collabs:
+            collab_list.append({
+                "id": c.id,
+                "project_name": c.project_name,
+                "influencer_name": c.influencer.name if c.influencer else "未知",
+                "status": c.status,
+                "status_label": status_labels.get(c.status, c.status),
+                "budget": float(c.budget or 0),
+                "actual_cost": float(c.actual_cost or 0),
+                "views": c.views or 0,
+                "likes": c.likes or 0,
+                "start_date": c.start_date.isoformat() if c.start_date else None,
+                "created_at": c.created_at.isoformat()
+            })
+        
+        operator_stats.append({
+            "user_id": operator.id,
+            "username": operator.username,
+            "nickname": operator.nickname or operator.username,
+            "avatar": operator.avatar,
+            "initiated_count": collab_count,
+            "completed_count": completed_count,
+            "completion_rate": completion_rate,
+            "total_budget": total_budget,
+            "total_cost": total_cost,
+            "total_views": total_views,
+            "avg_cpm": round(avg_cpm, 2),
+            "collaborations": collab_list
+        })
+    
+    operator_stats.sort(key=lambda x: x["completed_count"], reverse=True)
+    
+    team_totals = {
+        "initiated_count": sum(s["initiated_count"] for s in operator_stats),
+        "completed_count": sum(s["completed_count"] for s in operator_stats),
+        "total_budget": sum(s["total_budget"] for s in operator_stats),
+        "total_cost": sum(s["total_cost"] for s in operator_stats),
+        "total_views": sum(s["total_views"] for s in operator_stats)
+    }
+    if team_totals["total_views"] > 0 and team_totals["total_cost"] > 0:
+        team_totals["avg_cpm"] = round((team_totals["total_cost"] / team_totals["total_views"]) * 1000, 2)
+    else:
+        team_totals["avg_cpm"] = 0
+    
+    return {
+        "year": year,
+        "month": month,
+        "team_totals": team_totals,
+        "operators": operator_stats
+    }

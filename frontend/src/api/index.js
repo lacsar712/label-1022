@@ -189,7 +189,8 @@ export const statisticsApi = {
   getCollaborationStatus: () => api.get('/statistics/collaboration-status'),
   getMonthlyTrends: (months) => api.get('/statistics/monthly-trends', { params: { months } }),
   getTopInfluencers: (params) => api.get('/statistics/top-influencers', { params }),
-  getRecentCollaborations: (limit) => api.get('/statistics/recent-collaborations', { params: { limit } })
+  getRecentCollaborations: (limit) => api.get('/statistics/recent-collaborations', { params: { limit } }),
+  getOperatorKPI: (year, month) => api.get('/statistics/operator-kpi', { params: { year, month } })
 };
 
 // Brands API - 品牌方管理（管理员）

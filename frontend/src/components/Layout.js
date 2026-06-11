@@ -40,6 +40,7 @@ const Layout = () => {
     if (path.startsWith('/tiers')) return '达人等级管理';
     if (path.startsWith('/users')) return '用户管理';
     if (path.startsWith('/brands')) return '品牌方管理';
+    if (path.startsWith('/operator-kpi')) return '运营KPI看板';
     if (path.startsWith('/profile')) return '个人中心';
     return '';
   };
@@ -48,7 +49,8 @@ const Layout = () => {
     { 
       section: '概览',
       items: [
-        { path: '/dashboard', icon: '📊', label: '仪表盘', roles: ['admin', 'operator', 'user'] }
+        { path: '/dashboard', icon: '📊', label: '仪表盘', roles: ['admin', 'operator', 'user'] },
+        { path: '/operator-kpi', icon: '📈', label: '运营KPI看板', roles: ['admin', 'operator'] }
       ]
     },
     {
