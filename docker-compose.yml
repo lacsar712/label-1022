@@ -1,0 +1,65 @@
+services:
+  # Database Service
+  db:
+    image: mysql:8.0
+    container_name: influencer_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: influencer_platform
+      MYSQL_USER: influencer_user
+      MYSQL_PASSWORD: influencer_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - influencer_network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Backend Service
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: influencer_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: influencer_user
+      DB_PASSWORD: influencer_password
+      DB_NAME: influencer_platform
+      SECRET_KEY: your-secret-key-change-it-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - influencer_network
+
+  # Frontend Service
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: influencer_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - influencer_network
+
+volumes:
+  db_data:
+
+networks:
+  influencer_network:
+    driver: bridge
