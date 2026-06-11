@@ -15,6 +15,7 @@ class InfluencerBase(BaseModel):
     avatar: Optional[str] = None
     followers: int = 0
     category_id: Optional[int] = None
+    tier_id: Optional[int] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
@@ -57,6 +58,7 @@ class InfluencerUpdate(BaseModel):
     avatar: Optional[str] = None
     followers: Optional[int] = None
     category_id: Optional[int] = None
+    tier_id: Optional[int] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
@@ -96,6 +98,15 @@ class CategoryBrief(BaseModel):
         from_attributes = True
 
 
+class TierBrief(BaseModel):
+    id: int
+    name: str
+    color: str
+    
+    class Config:
+        from_attributes = True
+
+
 class InfluencerResponse(BaseModel):
     id: int
     name: str
@@ -104,6 +115,7 @@ class InfluencerResponse(BaseModel):
     avatar: Optional[str] = None
     followers: int
     category_id: Optional[int] = None
+    tier_id: Optional[int] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
@@ -116,6 +128,7 @@ class InfluencerResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     category: Optional[CategoryBrief] = None
+    tier: Optional[TierBrief] = None
     collaboration_count: int = 0
     
     class Config:

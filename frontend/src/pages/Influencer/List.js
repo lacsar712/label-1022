@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { influencersApi, categoriesApi } from '../../api';
+import { influencersApi, categoriesApi, tiersApi } from '../../api';
 import { useAuth, isOperator } from '../../contexts/AuthContext';
 import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
@@ -22,11 +22,13 @@ const InfluencerList = () => {
   const [keyword, setKeyword] = useState('');
   const [platform, setPlatform] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [tierId, setTierId] = useState('');
   const [status, setStatus] = useState('');
   
   // Options
   const [platforms, setPlatforms] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [tiers, setTiers] = useState([]);
   
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -46,6 +48,7 @@ const InfluencerList = () => {
       if (keyword) params.keyword = keyword;
       if (platform) params.platform = platform;
       if (categoryId) params.category_id = categoryId;
+      if (tierId) params.tier_id = tierId;
       if (status) params.status = status;
       
       const data = await influencersApi.getList(params);
@@ -56,16 +59,19 @@ const InfluencerList = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, platform, categoryId, status]);
+  }, [page, pageSize, keyword, platform, categoryId, tierId, status]);
 
   const fetchOptions = async () => {
     try {
-      const [platformsRes, categoriesRes] = await Promise.all([
+      const [platformsRes, categoriesRes, tiersRes] = await Promise.all([
         influencersApi.getPlatforms(),
-        categoriesApi.getList()
+        categoriesApi.getList(),
+        tiersApi.getList()
       ]);
       setPlatforms(platformsRes);
       setCategories(categoriesRes);
+      const sortedTiers = tiersRes.sort((a, b) => a.sort_order - b.sort_order);
+      setTiers(sortedTiers);
     } catch (error) {
       // Handled by interceptor
     }
@@ -88,6 +94,7 @@ const InfluencerList = () => {
     setKeyword('');
     setPlatform('');
     setCategoryId('');
+    setTierId('');
     setStatus('');
     setPage(1);
   };
@@ -100,6 +107,7 @@ const InfluencerList = () => {
       account_id: '',
       followers: 0,
       category_id: '',
+      tier_id: '',
       contact_name: '',
       contact_phone: '',
       contact_email: '',
@@ -124,6 +132,7 @@ const InfluencerList = () => {
         account_id: data.account_id || '',
         followers: data.followers || 0,
         category_id: data.category_id || '',
+        tier_id: data.tier_id || '',
         contact_name: data.contact_name || '',
         contact_phone: data.contact_phone || '',
         contact_email: data.contact_email || '',
@@ -166,6 +175,7 @@ const InfluencerList = () => {
       const submitData = {
         ...formData,
         category_id: formData.category_id || null,
+        tier_id: formData.tier_id ? parseInt(formData.tier_id) : null,
         followers: parseInt(formData.followers) || 0,
         cost_per_post: parseFloat(formData.cost_per_post) || 0,
         engagement_rate: parseFloat(formData.engagement_rate) || 0
@@ -217,6 +227,35 @@ const InfluencerList = () => {
     };
     const config = map[status] || { label: status, class: 'tag-gray' };
     return <span className={`tag ${config.class}`}>{config.label}</span>;
+  };
+
+  const getTierBadge = (tier) => {
+    if (!tier) return <span style={{ color: 'var(--text-tertiary)' }}>未分级</span>;
+    return (
+      <span 
+        className="tier-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '2px 10px',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: '500',
+          backgroundColor: tier.color + '15',
+          color: tier.color,
+          border: `1px solid ${tier.color}30`
+        }}
+      >
+        <span style={{ 
+          width: '8px', 
+          height: '8px', 
+          borderRadius: '50%', 
+          backgroundColor: tier.color 
+        }} />
+        {tier.name}
+      </span>
+    );
   };
 
   return (
@@ -273,6 +312,18 @@ const InfluencerList = () => {
             
             <select 
               className="form-select" 
+              style={{ width: '140px' }}
+              value={tierId}
+              onChange={(e) => setTierId(e.target.value)}
+            >
+              <option value="">全部等级</option>
+              {tiers.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            
+            <select 
+              className="form-select" 
               style={{ width: '120px' }}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
@@ -311,6 +362,7 @@ const InfluencerList = () => {
                     <th>平台</th>
                     <th>粉丝数</th>
                     <th>分类</th>
+                    <th>等级</th>
                     <th>单条报价</th>
                     <th>合作次数</th>
                     <th>状态</th>
@@ -341,6 +393,7 @@ const InfluencerList = () => {
                       <td><span className="tag tag-primary">{inf.platform}</span></td>
                       <td>{formatNumber(inf.followers)}</td>
                       <td>{inf.category?.name || '-'}</td>
+                      <td>{getTierBadge(inf.tier)}</td>
                       <td>¥{parseFloat(inf.cost_per_post).toLocaleString()}</td>
                       <td>{inf.collaboration_count}</td>
                       <td>{getStatusTag(inf.status)}</td>
@@ -459,6 +512,19 @@ const InfluencerList = () => {
         
         <div className="form-row">
           <div className="form-group">
+            <label className="form-label">达人等级</label>
+            <select
+              className="form-select"
+              value={formData.tier_id || ''}
+              onChange={(e) => setFormData({ ...formData, tier_id: e.target.value })}
+            >
+              <option value="">未分级</option>
+              {tiers.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
             <label className="form-label">粉丝数</label>
             <input
               type="number"
@@ -467,6 +533,9 @@ const InfluencerList = () => {
               onChange={(e) => setFormData({ ...formData, followers: e.target.value })}
             />
           </div>
+        </div>
+        
+        <div className="form-row">
           <div className="form-group">
             <label className="form-label">单条报价 (元)</label>
             <input
@@ -474,6 +543,16 @@ const InfluencerList = () => {
               className="form-input"
               value={formData.cost_per_post || 0}
               onChange={(e) => setFormData({ ...formData, cost_per_post: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">互动率 (%)</label>
+            <input
+              type="number"
+              step="0.01"
+              className="form-input"
+              value={formData.engagement_rate || 0}
+              onChange={(e) => setFormData({ ...formData, engagement_rate: e.target.value })}
             />
           </div>
         </div>

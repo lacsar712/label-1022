@@ -47,6 +47,20 @@ CREATE TABLE IF NOT EXISTS categories (
     FOREIGN KEY (parent_id) REFERENCES categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tiers table - 达人等级
+CREATE TABLE IF NOT EXISTS tiers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    color VARCHAR(20) DEFAULT '#1890ff',
+    min_followers INT DEFAULT 0,
+    max_followers INT DEFAULT 0,
+    sort_order INT DEFAULT 0,
+    description VARCHAR(200),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sort_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Influencers table
 CREATE TABLE IF NOT EXISTS influencers (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -56,6 +70,7 @@ CREATE TABLE IF NOT EXISTS influencers (
     avatar VARCHAR(255),
     followers INT DEFAULT 0,
     category_id INT,
+    tier_id INT,
     contact_name VARCHAR(50),
     contact_phone VARCHAR(20),
     contact_email VARCHAR(100),
@@ -70,7 +85,9 @@ CREATE TABLE IF NOT EXISTS influencers (
     INDEX idx_name (name),
     INDEX idx_platform (platform),
     INDEX idx_category (category_id),
-    FOREIGN KEY (category_id) REFERENCES categories(id)
+    INDEX idx_tier (tier_id),
+    FOREIGN KEY (category_id) REFERENCES categories(id),
+    FOREIGN KEY (tier_id) REFERENCES tiers(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Collaborations table
@@ -126,18 +143,25 @@ INSERT INTO categories (name, description, sort_order) VALUES
 ('娱乐搞笑', '娱乐、搞笑、剧情类博主', 9),
 ('其他', '其他类型博主', 10);
 
+-- Insert initial tiers - 达人等级
+INSERT INTO tiers (name, color, min_followers, max_followers, sort_order, description) VALUES
+('头部达人', '#f5222d', 1000000, 0, 1, '粉丝数100万以上的顶级达人'),
+('腰部达人', '#fa8c16', 300000, 1000000, 2, '粉丝数30万-100万的中坚力量'),
+('尾部达人', '#1890ff', 100000, 300000, 3, '粉丝数10万-30万的成长型达人'),
+('潜力达人', '#52c41a', 0, 100000, 4, '粉丝数10万以下的潜力新秀');
+
 -- Insert sample influencers
-INSERT INTO influencers (name, platform, account_id, followers, category_id, contact_name, contact_phone, contact_email, tags, cost_per_post, engagement_rate, status, notes) VALUES
-('李美妆', '小红书', 'limeizhunag', 580000, 1, '李经理', '13800138001', 'li@example.com', '美妆,护肤,口红', 15000.00, 5.20, 'active', '小红书头部美妆博主，种草能力强'),
-('时尚王子', '抖音', 'fashionprince', 1200000, 2, '王助理', '13800138002', 'wang@example.com', '穿搭,时尚,男装', 25000.00, 4.80, 'active', '抖音时尚领域TOP博主'),
-('吃货小明', 'B站', 'foodiexiaoming', 850000, 3, '陈经理', '13800138003', 'chen@example.com', '美食,探店,吃播', 18000.00, 6.50, 'active', 'B站美食区知名UP主'),
-('生活家小美', '微博', 'lifestylemei', 2500000, 4, '刘总', '13800138004', 'liu@example.com', '生活,家居,旅行', 35000.00, 3.20, 'active', '微博生活方式大V'),
-('科技达人', '抖音', 'techmaster', 980000, 5, '张经理', '13800138005', 'zhang@example.com', '科技,数码,测评', 22000.00, 4.50, 'active', '专业数码产品测评博主'),
-('辣妈日记', '小红书', 'hotmom', 420000, 6, '赵助理', '13800138006', 'zhao@example.com', '母婴,育儿,亲子', 12000.00, 7.80, 'active', '母婴领域专业博主'),
-('健身教练阿强', '快手', 'fitcoach', 680000, 7, '钱教练', '13800138007', 'qian@example.com', '健身,减脂,增肌', 16000.00, 5.60, 'active', '专业健身教练，粉丝粘性高'),
-('知识分享官', 'B站', 'knowledgeshare', 1500000, 8, '孙老师', '13800138008', 'sun@example.com', '知识,教育,学习', 28000.00, 8.20, 'active', 'B站知识区头部UP主'),
-('搞笑小王', '抖音', 'funnyking', 3200000, 9, '周经理', '13800138009', 'zhou@example.com', '搞笑,剧情,段子', 50000.00, 9.50, 'active', '抖音搞笑领域头部达人'),
-('护肤专家', '微信', 'skinexpert', 280000, 1, '吴经理', '13800138010', 'wu@example.com', '护肤,成分,测评', 10000.00, 4.30, 'active', '微信公众号护肤专家');
+INSERT INTO influencers (name, platform, account_id, followers, category_id, tier_id, contact_name, contact_phone, contact_email, tags, cost_per_post, engagement_rate, status, notes) VALUES
+('李美妆', '小红书', 'limeizhunag', 580000, 1, 2, '李经理', '13800138001', 'li@example.com', '美妆,护肤,口红', 15000.00, 5.20, 'active', '小红书头部美妆博主，种草能力强'),
+('时尚王子', '抖音', 'fashionprince', 1200000, 2, 1, '王助理', '13800138002', 'wang@example.com', '穿搭,时尚,男装', 25000.00, 4.80, 'active', '抖音时尚领域TOP博主'),
+('吃货小明', 'B站', 'foodiexiaoming', 850000, 3, 2, '陈经理', '13800138003', 'chen@example.com', '美食,探店,吃播', 18000.00, 6.50, 'active', 'B站美食区知名UP主'),
+('生活家小美', '微博', 'lifestylemei', 2500000, 4, 1, '刘总', '13800138004', 'liu@example.com', '生活,家居,旅行', 35000.00, 3.20, 'active', '微博生活方式大V'),
+('科技达人', '抖音', 'techmaster', 980000, 5, 2, '张经理', '13800138005', 'zhang@example.com', '科技,数码,测评', 22000.00, 4.50, 'active', '专业数码产品测评博主'),
+('辣妈日记', '小红书', 'hotmom', 420000, 6, 2, '赵助理', '13800138006', 'zhao@example.com', '母婴,育儿,亲子', 12000.00, 7.80, 'active', '母婴领域专业博主'),
+('健身教练阿强', '快手', 'fitcoach', 680000, 7, 2, '钱教练', '13800138007', 'qian@example.com', '健身,减脂,增肌', 16000.00, 5.60, 'active', '专业健身教练，粉丝粘性高'),
+('知识分享官', 'B站', 'knowledgeshare', 1500000, 8, 1, '孙老师', '13800138008', 'sun@example.com', '知识,教育,学习', 28000.00, 8.20, 'active', 'B站知识区头部UP主'),
+('搞笑小王', '抖音', 'funnyking', 3200000, 9, 1, '周经理', '13800138009', 'zhou@example.com', '搞笑,剧情,段子', 50000.00, 9.50, 'active', '抖音搞笑领域头部达人'),
+('护肤专家', '微信', 'skinexpert', 280000, 1, 3, '吴经理', '13800138010', 'wu@example.com', '护肤,成分,测评', 10000.00, 4.30, 'active', '微信公众号护肤专家');
 
 -- Insert sample collaborations
 INSERT INTO collaborations (influencer_id, user_id, project_name, status, start_date, end_date, budget, actual_cost, content_type, content_requirements, views, likes, comments, shares) VALUES

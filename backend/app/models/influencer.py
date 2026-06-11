@@ -23,6 +23,7 @@ class Influencer(Base):
     contact_email = Column(String(100))  # 联系邮箱
     contact_wechat = Column(String(50))  # 微信号
     tags = Column(String(500))  # 标签，逗号分隔
+    tier_id = Column(Integer, ForeignKey("tiers.id"))
     cost_per_post = Column(Numeric(12, 2), default=0)  # 单条报价
     engagement_rate = Column(Numeric(5, 2), default=0)  # 互动率
     status = Column(String(20), default="active")  # active, inactive, blacklisted
@@ -31,4 +32,5 @@ class Influencer(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     category = relationship("Category", back_populates="influencers")
+    tier = relationship("Tier", back_populates="influencers")
     collaborations = relationship("Collaboration", back_populates="influencer")

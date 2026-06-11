@@ -10,11 +10,12 @@ from contextlib import asynccontextmanager
 from .config import settings
 from .database import engine, Base
 from .utils.logger import logger, log_request
-from .routers import auth, users, profile, categories, influencers, collaborations, statistics
+from .routers import auth, users, profile, categories, influencers, collaborations, statistics, tiers
 
 # Import all models to ensure they are registered
 from .models.user import User, Role
 from .models.category import Category
+from .models.tier import Tier
 from .models.influencer import Influencer
 from .models.collaboration import Collaboration
 
@@ -80,6 +81,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(profile.router)
 app.include_router(categories.router)
+app.include_router(tiers.router)
 app.include_router(influencers.router)
 app.include_router(collaborations.router)
 app.include_router(statistics.router)

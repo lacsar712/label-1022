@@ -8,6 +8,7 @@ from typing import List, Optional
 from ..database import get_db
 from ..models.influencer import Influencer
 from ..models.category import Category
+from ..models.tier import Tier
 from ..models.collaboration import Collaboration
 from ..models.user import User
 from ..schemas.influencer import (
@@ -29,6 +30,7 @@ async def get_influencers(
     keyword: Optional[str] = None,
     platform: Optional[str] = None,
     category_id: Optional[int] = None,
+    tier_id: Optional[int] = None,
     status: Optional[str] = None,
     min_followers: Optional[int] = None,
     max_followers: Optional[int] = None,
@@ -40,7 +42,7 @@ async def get_influencers(
     - 支持分页
     - 支持多维度筛选
     """
-    query = db.query(Influencer).options(joinedload(Influencer.category))
+    query = db.query(Influencer).options(joinedload(Influencer.category), joinedload(Influencer.tier))
     
     # Apply filters
     if keyword:
@@ -57,6 +59,9 @@ async def get_influencers(
     
     if category_id:
         query = query.filter(Influencer.category_id == category_id)
+    
+    if tier_id:
+        query = query.filter(Influencer.tier_id == tier_id)
     
     if status:
         query = query.filter(Influencer.status == status)
@@ -85,6 +90,7 @@ async def get_influencers(
             "avatar": inf.avatar,
             "followers": inf.followers,
             "category_id": inf.category_id,
+            "tier_id": inf.tier_id,
             "contact_name": inf.contact_name,
             "contact_phone": inf.contact_phone,
             "contact_email": inf.contact_email,
@@ -97,6 +103,7 @@ async def get_influencers(
             "created_at": inf.created_at,
             "updated_at": inf.updated_at,
             "category": inf.category,
+            "tier": inf.tier,
             "collaboration_count": collab_count
         }
         items.append(InfluencerResponse(**inf_dict))
@@ -125,6 +132,15 @@ async def create_influencer(
                 detail="分类不存在"
             )
     
+    # Check tier exists if provided
+    if influencer_data.tier_id:
+        tier = db.query(Tier).filter(Tier.id == influencer_data.tier_id).first()
+        if not tier:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="等级不存在"
+            )
+    
     new_influencer = Influencer(**influencer_data.model_dump())
     db.add(new_influencer)
     db.commit()
@@ -140,6 +156,7 @@ async def create_influencer(
         avatar=new_influencer.avatar,
         followers=new_influencer.followers,
         category_id=new_influencer.category_id,
+        tier_id=new_influencer.tier_id,
         contact_name=new_influencer.contact_name,
         contact_phone=new_influencer.contact_phone,
         contact_email=new_influencer.contact_email,
@@ -152,6 +169,7 @@ async def create_influencer(
         created_at=new_influencer.created_at,
         updated_at=new_influencer.updated_at,
         category=None,
+        tier=None,
         collaboration_count=0
     )
 
@@ -185,7 +203,8 @@ async def get_influencer(
 ):
     """获取Influencer详情"""
     influencer = db.query(Influencer).options(
-        joinedload(Influencer.category)
+        joinedload(Influencer.category),
+        joinedload(Influencer.tier)
     ).filter(Influencer.id == influencer_id).first()
     
     if not influencer:
@@ -204,6 +223,7 @@ async def get_influencer(
         avatar=influencer.avatar,
         followers=influencer.followers,
         category_id=influencer.category_id,
+        tier_id=influencer.tier_id,
         contact_name=influencer.contact_name,
         contact_phone=influencer.contact_phone,
         contact_email=influencer.contact_email,
@@ -216,6 +236,7 @@ async def get_influencer(
         created_at=influencer.created_at,
         updated_at=influencer.updated_at,
         category=influencer.category,
+        tier=influencer.tier,
         collaboration_count=collab_count
     )
 
@@ -244,16 +265,33 @@ async def update_influencer(
                 detail="分类不存在"
             )
     
+    # Check tier exists if provided
+    if influencer_data.tier_id is not None:
+        if influencer_data.tier_id == 0:
+            # Allow setting to null
+            pass
+        else:
+            tier = db.query(Tier).filter(Tier.id == influencer_data.tier_id).first()
+            if not tier:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="等级不存在"
+                )
+    
     update_data = influencer_data.model_dump(exclude_unset=True)
+    # Handle setting tier_id to null
+    if 'tier_id' in update_data and update_data['tier_id'] == 0:
+        update_data['tier_id'] = None
     for field, value in update_data.items():
         setattr(influencer, field, value)
     
     db.commit()
     db.refresh(influencer)
     
-    # Reload with category
+    # Reload with category and tier
     influencer = db.query(Influencer).options(
-        joinedload(Influencer.category)
+        joinedload(Influencer.category),
+        joinedload(Influencer.tier)
     ).filter(Influencer.id == influencer_id).first()
     
     collab_count = db.query(Collaboration).filter(Collaboration.influencer_id == influencer_id).count()
@@ -268,6 +306,7 @@ async def update_influencer(
         avatar=influencer.avatar,
         followers=influencer.followers,
         category_id=influencer.category_id,
+        tier_id=influencer.tier_id,
         contact_name=influencer.contact_name,
         contact_phone=influencer.contact_phone,
         contact_email=influencer.contact_email,
@@ -280,6 +319,7 @@ async def update_influencer(
         created_at=influencer.created_at,
         updated_at=influencer.updated_at,
         category=influencer.category,
+        tier=influencer.tier,
         collaboration_count=collab_count
     )
 

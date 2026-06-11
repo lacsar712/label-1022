@@ -8,6 +8,7 @@ import InfluencerList from './pages/Influencer/List';
 import InfluencerDetail from './pages/Influencer/Detail';
 import CollaborationList from './pages/Collaboration/List';
 import CategoryList from './pages/Category/List';
+import TierList from './pages/Tier/List';
 import UserList from './pages/User/List';
 import Profile from './pages/Profile';
 import Toast from './components/Toast';
@@ -70,6 +71,11 @@ const AppRoutes = () => {
         <Route path="categories" element={
           <ProtectedRoute roles={['admin', 'operator']}>
             <CategoryList />
+          </ProtectedRoute>
+        } />
+        <Route path="tiers" element={
+          <ProtectedRoute roles={['admin', 'operator']}>
+            <TierList />
           </ProtectedRoute>
         } />
         <Route path="users" element={

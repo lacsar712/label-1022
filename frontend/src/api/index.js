@@ -137,6 +137,16 @@ export const categoriesApi = {
   delete: (id) => api.delete(`/categories/${id}`)
 };
 
+// Tiers API - 达人等级
+export const tiersApi = {
+  getList: () => api.get('/tiers'),
+  getById: (id) => api.get(`/tiers/${id}`),
+  create: (data) => api.post('/tiers', data),
+  update: (id, data) => api.put(`/tiers/${id}`, data),
+  delete: (id) => api.delete(`/tiers/${id}`),
+  reorder: (orders) => api.post('/tiers/reorder', { orders })
+};
+
 // Influencers API
 export const influencersApi = {
   getList: (params) => api.get('/influencers', { params }),

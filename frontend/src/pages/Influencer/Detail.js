@@ -66,6 +66,34 @@ const InfluencerDetail = () => {
     return <span className={`tag ${config.class}`}>{config.label}</span>;
   };
 
+  const getTierBadge = (tier) => {
+    if (!tier) return null;
+    return (
+      <span 
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 14px',
+          borderRadius: '16px',
+          fontSize: '13px',
+          fontWeight: '500',
+          backgroundColor: tier.color + '15',
+          color: tier.color,
+          border: `1px solid ${tier.color}30`
+        }}
+      >
+        <span style={{ 
+          width: '10px', 
+          height: '10px', 
+          borderRadius: '50%', 
+          backgroundColor: tier.color 
+        }} />
+        {tier.name}
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -113,6 +141,7 @@ const InfluencerDetail = () => {
         <div className="detail-info">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <h1 className="detail-name" style={{ margin: 0 }}>{influencer.name}</h1>
+            {influencer.tier && getTierBadge(influencer.tier)}
             {getStatusTag(influencer.status)}
           </div>
           
@@ -131,6 +160,12 @@ const InfluencerDetail = () => {
               <div className="detail-meta-item">
                 <span>📁</span>
                 <span>{influencer.category.name}</span>
+              </div>
+            )}
+            {influencer.tier && (
+              <div className="detail-meta-item">
+                <span>⭐</span>
+                <span>{influencer.tier.name}</span>
               </div>
             )}
           </div>
