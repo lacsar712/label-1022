@@ -3,7 +3,7 @@ Statistics Router - Dashboard Statistics
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, or_, and_
 from datetime import datetime, timedelta
 from typing import Optional
 from ..database import get_db
@@ -281,8 +281,18 @@ async def get_operator_kpi(
             joinedload(Collaboration.influencer)
         ).filter(
             Collaboration.user_id == operator.id,
-            Collaboration.created_at >= start_date,
-            Collaboration.created_at < end_date
+            or_(
+                and_(
+                    Collaboration.start_date.isnot(None),
+                    Collaboration.start_date >= start_date.date(),
+                    Collaboration.start_date < end_date.date()
+                ),
+                and_(
+                    Collaboration.start_date.is_(None),
+                    Collaboration.created_at >= start_date,
+                    Collaboration.created_at < end_date
+                )
+            )
         )
         
         collabs = collabs_query.all()

@@ -89,7 +89,7 @@ const OperatorKPIDashboard = () => {
 
   const getMonthOptions = () => {
     const options = [];
-    for (let y = now.getFullYear() - 2; y <= now.getFullYear(); y++) {
+    for (let y = now.getFullYear() - 5; y <= now.getFullYear(); y++) {
       for (let m = 1; m <= 12; m++) {
         if (y === now.getFullYear() && m > now.getMonth() + 1) break;
         options.push({ year: y, month: m, label: `${y}年${m}月` });
