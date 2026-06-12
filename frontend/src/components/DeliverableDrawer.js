@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { deliverablesApi } from '../../api';
-import { useAuth, isOperator } from '../../contexts/AuthContext';
-import { showToast } from '../Toast';
-import ConfirmDialog from '../ConfirmDialog';
+import { deliverablesApi } from '../api';
+import { useAuth, isOperator } from '../contexts/AuthContext';
+import { showToast } from './Toast';
+import ConfirmDialog from './ConfirmDialog';
 
 const DeliverableDrawer = ({ isOpen, onClose, collaborationId, collaborationName }) => {
   const { user } = useAuth();

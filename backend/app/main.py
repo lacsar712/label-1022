@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from .config import settings
 from .database import engine, Base
+from .migrations import run_migrations
 from .utils.logger import logger, log_request
 from .routers import auth, users, profile, categories, influencers, collaborations, statistics, tiers, deliverables, brands, brand_portal, pipelines, competitive_intelligence, message_templates
 
@@ -31,8 +32,9 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     
-    # Create tables
+    # Create tables and apply incremental migrations
     Base.metadata.create_all(bind=engine)
+    run_migrations()
     logger.info("Database tables created/verified")
     
     yield

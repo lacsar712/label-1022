@@ -166,6 +166,25 @@ CREATE TABLE IF NOT EXISTS brands (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Add brand_id to users (must run after brands table exists)
+SET @dbname = DATABASE();
+SET @tablename = 'users';
+SET @columnname = 'brand_id';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_schema = @dbname)
+      AND (table_name = @tablename)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' INT NULL AFTER role_id, ADD CONSTRAINT fk_users_brand_id FOREIGN KEY (', @columnname, ') REFERENCES brands(id) ON DELETE SET NULL')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
 -- Brand Collaboration Authorizations table - 品牌方授权可见的合作
 CREATE TABLE IF NOT EXISTS brand_collaboration_authorizations (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -181,9 +200,6 @@ CREATE TABLE IF NOT EXISTS brand_collaboration_authorizations (
     FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
     FOREIGN KEY (granted_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Add brand_id column to users table if not exists
--- Note: This is handled by the ALTER TABLE below for existing installations
 
 -- Insert initial roles - add brand role
 INSERT INTO roles (id, name, description, permissions) VALUES
@@ -360,25 +376,6 @@ INSERT INTO competitive_intelligence (influencer_id, competitor_name, estimated_
 (2, '李宁', 35000.00, '抖音广告投放', '2025-01-15', '抖音开屏广告出现该达人为李宁拍摄的宣传片', 2),
 (5, '小米', 25000.00, 'B站视频植入', '2025-01-20', '视频中出现小米最新款手机测评', 2),
 (9, '元气森林', 55000.00, '品牌官方微博', '2025-02-01', '元气森林官宣该达人为品牌大使', 2);
-
--- Add column to users table if not exists (for brand_id)
-SET @dbname = DATABASE();
-SET @tablename = 'users';
-SET @columnname = 'brand_id';
-SET @preparedStatement = (SELECT IF(
-  (
-    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE
-      (table_schema = @dbname)
-      AND (table_name = @tablename)
-      AND (column_name = @columnname)
-  ) > 0,
-  'SELECT 1',
-  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' INT AFTER role_id, ADD FOREIGN KEY (', @columnname, ') REFERENCES brands(id) ON DELETE SET NULL')
-));
-PREPARE alterIfNotExists FROM @preparedStatement;
-EXECUTE alterIfNotExists;
-DEALLOCATE PREPARE alterIfNotExists;
 
 -- Content Deliverables table (if not exists)
 CREATE TABLE IF NOT EXISTS content_deliverables (

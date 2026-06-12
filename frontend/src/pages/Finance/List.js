@@ -303,13 +303,14 @@ const FinanceLedgerList = () => {
   const handleSave = async () => {
     if (!validateForm()) return;
 
+    const submitData = {
+      ...formData,
+      collaboration_id: parseInt(formData.collaboration_id),
+      invoice_amount: parseFloat(formData.invoice_amount) || 0
+    };
+
     try {
       setSaving(true);
-      const submitData = {
-        ...formData,
-        collaboration_id: parseInt(formData.collaboration_id),
-        invoice_amount: parseFloat(formData.invoice_amount) || 0
-      };
 
       if (editingId) {
         await financeLedgerApi.update(editingId, submitData);
@@ -418,12 +419,13 @@ const FinanceLedgerList = () => {
   const handlePaymentSave = async () => {
     if (!validatePaymentForm()) return;
 
+    const submitData = {
+      ...paymentFormData,
+      amount: parseFloat(paymentFormData.amount) || 0
+    };
+
     try {
       setPaymentSaving(true);
-      const submitData = {
-        ...paymentFormData,
-        amount: parseFloat(paymentFormData.amount) || 0
-      };
 
       if (editingPaymentId) {
         await financeLedgerApi.updatePayment(currentLedgerId, editingPaymentId, submitData);
