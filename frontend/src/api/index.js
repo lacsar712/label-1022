@@ -251,4 +251,16 @@ export const competitiveIntelligenceApi = {
   delete: (id) => api.delete(`/competitive-intelligence/${id}`)
 };
 
+// Message Templates API - 消息模板
+export const messageTemplatesApi = {
+  getList: (params) => api.get('/message-templates', { params }),
+  getCategories: () => api.get('/message-templates/categories'),
+  getById: (id) => api.get(`/message-templates/${id}`),
+  create: (data) => api.post('/message-templates', data),
+  update: (id, data) => api.put(`/message-templates/${id}`, data),
+  delete: (id) => api.delete(`/message-templates/${id}`),
+  preview: (data) => api.post('/message-templates/preview', data),
+  getVariables: (id) => api.get(`/message-templates/${id}/variables`)
+};
+
 export default api;

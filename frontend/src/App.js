@@ -22,6 +22,7 @@ import OperatorKPIDashboard from './pages/Operator/KPIDashboard';
 import FinanceLedgerList from './pages/Finance/List';
 import CompetitiveIntelligenceList from './pages/CompetitiveIntelligence/List';
 import ContentCalendar from './pages/ContentCalendar/Index';
+import MessageTemplateList from './pages/MessageTemplate/List';
 import Toast from './components/Toast';
 
 const ProtectedRoute = ({ children, roles }) => {
@@ -131,6 +132,11 @@ const AppRoutes = () => {
         <Route path="/content-calendar" element={
           <ProtectedRoute roles={['admin', 'operator', 'user']}>
             <ContentCalendar />
+          </ProtectedRoute>
+        } />
+        <Route path="/message-templates" element={
+          <ProtectedRoute roles={['admin', 'operator', 'user']}>
+            <MessageTemplateList />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={<Profile />} />

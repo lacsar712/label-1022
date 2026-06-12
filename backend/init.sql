@@ -296,7 +296,7 @@ INSERT INTO influencer_pipelines (influencer_id, stage, notes, owner_id, created
 (10, 'to_contact', '微信护肤专家，初步评估适合中小预算合作', 2, '2025-01-15 09:00:00');
 
 -- Insert sample brand-collaboration authorizations - 品牌方授权合作示例
--- 美肌美妆授权可见的合作: 春季新品口红推广(1)、护肤品牌年度代言(10)
+-- 美味餐饮授权可见的合作: 餐厅开业推广(3)
 INSERT INTO brand_collaboration_authorizations (brand_id, collaboration_id, granted_by, notes) VALUES
 (1, 1, 1, '2025春季口红推广授权'),
 (1, 10, 1, '年度护肤代言合作授权'),
@@ -304,3 +304,181 @@ INSERT INTO brand_collaboration_authorizations (brand_id, collaboration_id, gran
 (2, 2, 1, '2025春季联名活动授权'),
 -- 美味餐饮授权可见的合作: 餐厅开业推广(3)
 (3, 3, 1, '新店开业推广授权');
+
+-- Message Templates table - 消息模板
+CREATE TABLE IF NOT EXISTS message_templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    subject VARCHAR(200),
+    content TEXT NOT NULL,
+    variables VARCHAR(500),
+    description VARCHAR(200),
+    sort_order INT DEFAULT 0,
+    is_active INT DEFAULT 1,
+    creator_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category),
+    INDEX idx_is_active (is_active),
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert initial message templates - 初始消息模板
+INSERT INTO message_templates (name, category, subject, content, description, sort_order, is_active, creator_id) VALUES
+('初次邀约邮件', '初次邀约', '品牌合作邀约 - {达人姓名}', '尊敬的{达人姓名}：\n\n您好！我是{我方品牌}的{联系人姓名}。\n\n我们一直在关注您在{所属平台}的精彩内容，特别是您在{领域}领域的专业见解和独特风格，给我们留下了深刻印象。\n\n我们品牌近期正在筹备{项目名称}项目，非常希望能与您达成合作。\n\n合作形式：{合作形式}\n预算范围：{预算范围}\n预计时间：{预计时间}\n\n如果您对此次合作感兴趣，或者想了解更多详情，欢迎随时与我联系。\n\n期待您的回复！\n\nBest regards,\n{联系人姓名}\n{我方品牌}\n联系方式：{联系电话} / {联系邮箱}', '用于初次联系达人，介绍品牌和合作意向', 1, 1, 1),
+('初次邀约微信', '初次邀约', NULL, '您好{达人姓名}，我是{我方品牌}的{联系人姓名}。关注您{所属平台}的内容很久了，非常欣赏您在{领域}的专业度。我们近期有个{项目名称}的合作想邀请您参与，预算{预算范围}，请问方便聊聊吗？', '用于微信等即时通讯工具的初次联系', 2, 1, 1),
+('跟进催复-首次', '跟进催复', '跟进：关于{项目名称}合作邀约', '您好{达人姓名}：\n\n冒昧跟进，请问您之前收到的关于{项目名称}的合作邀约，考虑得怎么样了？\n\n我们非常期待能与您合作，如果有任何疑问或者需要调整的地方，欢迎随时沟通。\n\n如果您暂时没有档期，也没关系，可以先加个联系方式，后续有合适的项目再联系您。\n\n盼复！\n\n{联系人姓名}\n{联系电话}', '发送邀约后3-5天未回复时使用', 1, 1, 1),
+('跟进催复-二次', '跟进催复', '再次跟进：{项目名称}合作机会', '您好{达人姓名}：\n\n再次打扰您了！关于之前提到的{项目名称}合作，不知道您近期是否有档期呢？\n\n我们非常欣赏您的内容风格，即使这次合作不成，也希望能保持联系，后续有其他项目也可以第一时间与您沟通。\n\n方便的话可以告知一下您的合作意向吗？非常感谢！\n\n{联系人姓名}\n{联系电话}', '首次跟进后仍未回复时使用', 2, 1, 1),
+('合同确认邮件', '合同确认', '合同确认 - {项目名称}合作', '您好{达人姓名}：\n\n感谢您确认与我们的合作！\n\n现将{项目名称}的合作合同发送给您，请查收附件。\n\n合同要点回顾：\n1. 合作内容：{合作内容}\n2. 合作金额：{合作金额}\n3. 交付时间：{交付时间}\n4. 付款方式：{付款方式}\n\n请您仔细核对合同内容，如无异议请签署后回传。如有问题，请随时与我联系。\n\n感谢您的配合！\n\n{联系人姓名}\n{我方品牌}', '用于发送合同并请达人确认', 1, 1, 1),
+('内容审核反馈', '内容审核', '关于{项目名称}内容审核反馈', '您好{达人姓名}：\n\n收到您提交的{项目名称}内容了，感谢您的高效产出！\n\n我们内部审核后，有几点小建议想与您沟通：\n{审核反馈}\n\n整体内容方向我们非常认可，以上只是一些细节调整建议，您看看是否合理？如有任何疑问欢迎随时讨论。\n\n期待您的调整版本！\n\n{联系人姓名}', '用于内容审核后的反馈沟通', 1, 1, 1),
+('付款通知', '合同确认', '付款通知 - {项目名称}', '您好{达人姓名}：\n\n{项目名称}的合作款项已安排支付，请您注意查收。\n\n付款金额：{付款金额}\n付款时间：{付款时间}\n\n预计{到账时间}左右到账，如有任何问题请随时联系我们。\n\n感谢您的优质合作，期待下次继续！\n\n{联系人姓名}\n{我方品牌}', '用于通知达人款项已支付', 2, 1, 1),
+('节日问候', '日常维护', NULL, '您好{达人姓名}，{节日}快乐！感谢您一直以来对{我方品牌}的支持，期待未来继续携手，创造更多精彩内容！', '节日时发送问候，维护客情', 1, 1, 1),
+('新品推荐', '日常维护', NULL, '您好{达人姓名}，我们最近推出了{新品名称}，想第一时间分享给您。产品主打{产品卖点}，不知道您是否感兴趣体验一下？如果喜欢的话我们可以寄样给您~', '新品上市时推荐给达人', 2, 1, 1);
+
+-- Competitive Intelligence table - 竞品情报
+CREATE TABLE IF NOT EXISTS competitive_intelligence (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    influencer_id INT NOT NULL,
+    competitor_name VARCHAR(200) NOT NULL,
+    estimated_amount DECIMAL(12, 2) DEFAULT 0,
+    source VARCHAR(200),
+    discovery_date DATE,
+    notes TEXT,
+    creator_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_influencer (influencer_id),
+    INDEX idx_competitor (competitor_name),
+    FOREIGN KEY (influencer_id) REFERENCES influencers(id) ON DELETE CASCADE,
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert sample competitive intelligence data - 示例竞品情报数据
+INSERT INTO competitive_intelligence (influencer_id, competitor_name, estimated_amount, source, discovery_date, notes, creator_id) VALUES
+(1, '完美日记', 20000.00, '小红书平台观察', '2025-01-10', '近期发布完美日记口红推广笔记', 2),
+(2, '李宁', 35000.00, '抖音广告投放', '2025-01-15', '抖音开屏广告出现该达人为李宁拍摄的宣传片', 2),
+(5, '小米', 25000.00, 'B站视频植入', '2025-01-20', '视频中出现小米最新款手机测评', 2),
+(9, '元气森林', 55000.00, '品牌官方微博', '2025-02-01', '元气森林官宣该达人为品牌大使', 2);
+
+-- Add column to users table if not exists (for brand_id)
+SET @dbname = DATABASE();
+SET @tablename = 'users';
+SET @columnname = 'brand_id';
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE
+      (table_schema = @dbname)
+      AND (table_name = @tablename)
+      AND (column_name = @columnname)
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE ', @tablename, ' ADD COLUMN ', @columnname, ' INT AFTER role_id, ADD FOREIGN KEY (', @columnname, ') REFERENCES brands(id) ON DELETE SET NULL')
+));
+PREPARE alterIfNotExists FROM @preparedStatement;
+EXECUTE alterIfNotExists;
+DEALLOCATE PREPARE alterIfNotExists;
+
+-- Content Deliverables table (if not exists)
+CREATE TABLE IF NOT EXISTS content_deliverables (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    collaboration_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    platform VARCHAR(50),
+    content_type VARCHAR(50),
+    due_date DATE,
+    content_link VARCHAR(500),
+    published_at DATE,
+    review_status VARCHAR(20) DEFAULT 'pending',
+    review_notes TEXT,
+    views INT DEFAULT 0,
+    likes INT DEFAULT 0,
+    comments INT DEFAULT 0,
+    shares INT DEFAULT 0,
+    creator_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_collaboration (collaboration_id),
+    INDEX idx_review_status (review_status),
+    INDEX idx_platform (platform),
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert sample deliverables data - 示例交付物数据
+INSERT INTO content_deliverables (collaboration_id, title, platform, content_type, due_date, content_link, published_at, review_status, views, likes, comments, shares, creator_id) VALUES
+(1, '春季新品口红测评', '小红书', '图文', '2025-01-25', 'https://xiaohongshu.com/example1', '2025-01-26', 'approved', 125000, 8500, 620, 1200, 2),
+(2, '男装春季穿搭指南', '抖音', '短视频', '2025-02-20', NULL, NULL, 'pending', 0, 0, 0, 0, 2),
+(3, '高端餐厅探店vlog', 'B站', '长视频', '2025-01-18', 'https://bilibili.com/example3', '2025-01-19', 'approved', 230000, 15000, 2100, 3500, 2),
+(4, '2月家居好物推荐', '微博', '图文', '2025-02-15', NULL, NULL, 'pending', 0, 0, 0, 0, 2),
+(7, '健身器材使用教程', '快手', '直播', '2025-02-10', 'https://kuaishou.com/example7', '2025-02-10', 'approved', 45000, 3200, 420, 280, 2),
+(8, '高效学习方法分享', 'B站', '长视频', '2024-12-25', 'https://bilibili.com/example8', '2024-12-26', 'approved', 420000, 35000, 4200, 8500, 2),
+(10, '1月护肤routine', '小红书', '图文', '2025-01-30', 'https://xiaohongshu.com/example10', '2025-01-31', 'approved', 180000, 12000, 950, 2100, 2),
+(10, '2月护肤爱用品', '小红书', '图文', '2025-02-28', NULL, NULL, 'pending', 0, 0, 0, 0, 2);
+
+-- Finance Ledger table - 财务台账
+CREATE TABLE IF NOT EXISTS finance_ledgers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    collaboration_id INT NOT NULL,
+    influencer_id INT NOT NULL,
+    type VARCHAR(30) NOT NULL DEFAULT 'payment',
+    amount DECIMAL(12, 2) NOT NULL,
+    payment_date DATE,
+    payment_method VARCHAR(50),
+    transaction_no VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'pending',
+    notes TEXT,
+    creator_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_collaboration (collaboration_id),
+    INDEX idx_influencer (influencer_id),
+    INDEX idx_status (status),
+    INDEX idx_type (type),
+    FOREIGN KEY (collaboration_id) REFERENCES collaborations(id) ON DELETE CASCADE,
+    FOREIGN KEY (influencer_id) REFERENCES influencers(id),
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert sample finance ledger data - 示例财务数据
+INSERT INTO finance_ledgers (collaboration_id, influencer_id, type, amount, payment_date, payment_method, transaction_no, status, notes, creator_id) VALUES
+(1, 1, 'payment', 15000.00, '2025-02-01', '银行转账', 'TRX20250201001', 'paid', '春季口红推广首款50%', 1),
+(1, 1, 'payment', 15000.00, '2025-02-15', '银行转账', 'TRX20250215001', 'paid', '春季口红推广尾款50%', 1),
+(2, 2, 'payment', 15000.00, '2025-02-05', '银行转账', 'TRX20250205001', 'paid', '男装联名活动首款50%', 1),
+(3, 3, 'payment', 18000.00, '2025-01-25', '银行转账', 'TRX20250125001', 'paid', '餐厅推广全款', 1),
+(4, 4, 'payment', 35000.00, '2025-01-20', '银行转账', 'TRX20250120001', 'paid', '年度合作Q1款项', 1),
+(5, 5, 'payment', 12500.00, NULL, NULL, NULL, 'pending', '手机评测首款50%待支付', 1),
+(6, 6, 'payment', 12000.00, '2025-01-20', '银行转账', 'TRX20250120002', 'paid', '母婴用品种草全款', 1),
+(7, 7, 'payment', 9000.00, '2025-02-08', '银行转账', 'TRX20250208001', 'paid', '健身器材推广首款50%', 1),
+(8, 8, 'payment', 30000.00, '2025-01-05', '银行转账', 'TRX20250105001', 'paid', '教育平台推广全款', 1),
+(10, 1, 'payment', 40000.00, '2025-01-15', '银行转账', 'TRX20250115001', 'paid', '年度代言Q1款项', 1);
+
+-- Finance Payments table - 付款记录明细
+CREATE TABLE IF NOT EXISTS finance_payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ledger_id INT NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_method VARCHAR(50),
+    transaction_no VARCHAR(100),
+    notes TEXT,
+    creator_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ledger (ledger_id),
+    FOREIGN KEY (ledger_id) REFERENCES finance_ledgers(id) ON DELETE CASCADE,
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert sample payment records - 示例付款记录
+INSERT INTO finance_payments (ledger_id, amount, payment_date, payment_method, transaction_no, notes, creator_id) VALUES
+(1, 7500.00, '2025-02-01', '银行转账', 'TRX20250201001', '首款50%', 1),
+(1, 7500.00, '2025-02-15', '银行转账', 'TRX20250215001', '尾款50%', 1),
+(2, 15000.00, '2025-02-15', '银行转账', 'TRX20250215002', '全款', 1),
+(3, 9000.00, '2025-02-05', '银行转账', 'TRX20250205001', '首款50%', 1),
+(4, 18000.00, '2025-01-25', '银行转账', 'TRX20250125001', '全款', 1),
+(5, 35000.00, '2025-01-20', '银行转账', 'TRX20250120001', 'Q1款项', 1),
+(6, 12000.00, '2025-01-20', '银行转账', 'TRX20250120002', '全款', 1),
+(7, 9000.00, '2025-02-08', '银行转账', 'TRX20250208001', '首款50%', 1),
+(8, 30000.00, '2025-01-05', '银行转账', 'TRX20250105001', '全款', 1),
+(9, 40000.00, '2025-01-15', '银行转账', 'TRX20250115001', 'Q1款项', 1);

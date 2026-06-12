@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   LineChart,
@@ -10,8 +10,10 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { influencersApi, collaborationsApi, competitiveIntelligenceApi } from '../../api';
+import { influencersApi, collaborationsApi, competitiveIntelligenceApi, messageTemplatesApi } from '../../api';
 import { useAuth, isOperator } from '../../contexts/AuthContext';
+import { showToast } from '../../components/Toast';
+import Modal from '../../components/Modal';
 
 const InfluencerDetail = () => {
   const { id } = useParams();
@@ -27,6 +29,15 @@ const InfluencerDetail = () => {
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [competitiveIntel, setCompetitiveIntel] = useState([]);
   const [competitiveIntelLoading, setCompetitiveIntelLoading] = useState(false);
+  
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateVariables, setTemplateVariables] = useState({});
+  const [previewResult, setPreviewResult] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('初次邀约');
 
   useEffect(() => {
     fetchData();
@@ -76,6 +87,107 @@ const InfluencerDetail = () => {
       setCompetitiveIntelLoading(false);
     }
   };
+
+  const parseVariables = (content) => {
+    const pattern = /\{([^}]+)\}/g;
+    const variables = [];
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      if (!variables.includes(match[1])) {
+        variables.push(match[1]);
+      }
+    }
+    return variables;
+  };
+
+  const fetchTemplates = useCallback(async () => {
+    try {
+      setTemplatesLoading(true);
+      const data = await messageTemplatesApi.getList({ is_active: 1 });
+      setTemplates(data);
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, []);
+
+  const openInviteModal = async () => {
+    await fetchTemplates();
+    setShowInviteModal(true);
+    setSelectedTemplate(null);
+    setPreviewResult(null);
+    setTemplateVariables({});
+    setActiveCategory('初次邀约');
+  };
+
+  const selectTemplate = (template) => {
+    setSelectedTemplate(template);
+    setPreviewResult(null);
+    
+    const variables = parseVariables(template.content);
+    const vars = {};
+    
+    variables.forEach(v => {
+      let defaultValue = '';
+      switch (v) {
+        case '达人姓名':
+          defaultValue = influencer?.name || '';
+          break;
+        case '所属平台':
+          defaultValue = influencer?.platform || '';
+          break;
+        case '领域':
+          defaultValue = influencer?.category?.name || '';
+          break;
+        case '联系人姓名':
+          defaultValue = user?.nickname || user?.username || '';
+          break;
+        default:
+          defaultValue = '';
+      }
+      vars[v] = defaultValue;
+    });
+    
+    setTemplateVariables(vars);
+  };
+
+  const handlePreview = async () => {
+    if (!selectedTemplate) return;
+    
+    try {
+      setPreviewLoading(true);
+      const result = await messageTemplatesApi.preview({
+        template_id: selectedTemplate.id,
+        variables: templateVariables
+      });
+      setPreviewResult(result);
+    } catch (error) {
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    showToast('success', '已复制到剪贴板');
+  };
+
+  const categoryColors = {
+    '初次邀约': '#1890ff',
+    '跟进催复': '#fa8c16',
+    '合同确认': '#52c41a',
+    '内容审核': '#722ed1',
+    '日常维护': '#eb2f96'
+  };
+
+  const getCategoryColor = (category) => {
+    return categoryColors[category] || '#1890ff';
+  };
+
+  const categories = ['初次邀约', '跟进催复', '合同确认', '内容审核', '日常维护'];
+  
+  const filteredTemplates = templates.filter(t => t.category === activeCategory);
 
   const formatNumber = (num) => {
     if (num >= 10000) {
@@ -254,10 +366,19 @@ const InfluencerDetail = () => {
           {influencer.name?.[0]}
         </div>
         <div className="detail-info">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <h1 className="detail-name" style={{ margin: 0 }}>{influencer.name}</h1>
             {influencer.tier && getTierBadge(influencer.tier)}
             {getStatusTag(influencer.status)}
+            {canEdit && (
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={openInviteModal}
+                style={{ marginLeft: 'auto' }}
+              >
+                ✉️ 一键生成邀约
+              </button>
+            )}
           </div>
           
           <div className="detail-meta">
@@ -667,6 +788,271 @@ const InfluencerDetail = () => {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        title="一键生成邀约"
+        size="large"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowInviteModal(false)}>
+              关闭
+            </button>
+            {selectedTemplate && (
+              <button
+                className="btn btn-primary"
+                onClick={handlePreview}
+                disabled={previewLoading}
+              >
+                {previewLoading ? '生成中...' : '生成预览'}
+              </button>
+            )}
+          </>
+        }
+      >
+        <div style={{ display: 'grid', gap: '16px' }}>
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">当前达人</h3>
+            </div>
+            <div className="card-body">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--primary-color)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  fontWeight: 'bold'
+                }}>
+                  {influencer?.name?.[0]}
+                </div>
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    {influencer?.name}
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {influencer?.platform} · {influencer?.category?.name} · {formatNumber(influencer?.followers)}粉丝
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">选择模板</h3>
+            </div>
+            <div className="card-body">
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    className={`btn ${activeCategory === cat ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+                    onClick={() => {
+                      setActiveCategory(cat);
+                      setSelectedTemplate(null);
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {templatesLoading ? (
+                <div className="loading" style={{ minHeight: '100px' }}>
+                  <div className="spinner"></div>
+                </div>
+              ) : filteredTemplates.length === 0 ? (
+                <div className="empty-state" style={{ padding: '30px' }}>
+                  <div className="empty-icon">📝</div>
+                  <div className="empty-title">该分类下暂无模板</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {filteredTemplates.map(template => (
+                    <div
+                      key={template.id}
+                      onClick={() => selectTemplate(template)}
+                      style={{
+                        padding: '12px',
+                        border: `2px solid ${selectedTemplate?.id === template.id ? getCategoryColor(template.category) : 'var(--border-color)'}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        backgroundColor: selectedTemplate?.id === template.id ? getCategoryColor(template.category) + '08' : 'transparent',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '6px'
+                          }}>
+                            <span style={{
+                              fontSize: '15px',
+                              fontWeight: '600',
+                              color: 'var(--text-primary)'
+                            }}>
+                              {template.name}
+                            </span>
+                            <span
+                              className="tag"
+                              style={{
+                                fontSize: '11px',
+                                backgroundColor: getCategoryColor(template.category) + '15',
+                                color: getCategoryColor(template.category),
+                                border: `1px solid ${getCategoryColor(template.category)}30`
+                              }}
+                            >
+                              {template.category}
+                            </span>
+                          </div>
+                          {template.subject && (
+                            <div style={{
+                              fontSize: '12px',
+                              color: 'var(--text-secondary)',
+                              marginBottom: '4px'
+                            }}>
+                              主题：{template.subject}
+                            </div>
+                          )}
+                          <div style={{
+                            fontSize: '12px',
+                            color: 'var(--text-tertiary)',
+                            lineHeight: '1.5',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}>
+                            {template.content.substring(0, 100)}...
+                          </div>
+                          {template.variables && (
+                            <div style={{ display: 'flex', gap: '4px', marginTop: '8px', flexWrap: 'wrap' }}>
+                              {template.variables.split(',').filter(v => v).slice(0, 5).map((v, idx) => (
+                                <span key={idx} className="tag tag-primary" style={{ fontSize: '10px' }}>
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {selectedTemplate?.id === template.id && (
+                          <span style={{ color: getCategoryColor(template.category), fontSize: '20px' }}>
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {selectedTemplate && (
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">填充变量</h3>
+              </div>
+              <div className="card-body">
+                {Object.keys(templateVariables).length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                    {Object.keys(templateVariables).map(key => (
+                      <div className="form-group" key={key}>
+                        <label className="form-label">{key}</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder={`请输入${key}`}
+                          value={templateVariables[key] || ''}
+                          onChange={(e) => setTemplateVariables({
+                            ...templateVariables,
+                            [key]: e.target.value
+                          })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: '20px' }}>
+                    该模板不包含任何变量
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {previewResult && (
+            <div className="card">
+              <div className="card-header">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 className="card-title">预览结果</h3>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => copyToClipboard(previewResult.content)}
+                  >
+                    复制文案
+                  </button>
+                </div>
+              </div>
+              <div className="card-body">
+                {previewResult.subject && (
+                  <div style={{
+                    marginBottom: '16px',
+                    padding: '12px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: '6px'
+                  }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                      主题
+                    </div>
+                    <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '500' }}>
+                      {previewResult.subject}
+                    </div>
+                  </div>
+                )}
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: '#fff',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  minHeight: '150px',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.8',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)'
+                }}>
+                  {previewResult.content}
+                </div>
+                <div style={{
+                  marginTop: '16px',
+                  padding: '12px',
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: '6px'
+                }}>
+                  <div style={{ fontSize: '13px', color: '#0369a1', fontWeight: '500' }}>
+                    💡 使用提示
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#0369a1', marginTop: '4px', lineHeight: '1.6' }}>
+                    点击「复制文案」按钮后，可直接粘贴到邮件、微信等沟通工具中使用。
+                    如需要调整内容，可在上方修改变量后重新生成预览。
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

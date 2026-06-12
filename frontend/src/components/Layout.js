@@ -40,6 +40,7 @@ const Layout = () => {
     if (path.startsWith('/content-calendar')) return '内容排期日历';
     if (path.startsWith('/finance')) return '财务台账';
     if (path.startsWith('/competitive-intelligence')) return '竞品情报';
+    if (path.startsWith('/message-templates')) return '消息模板库';
     if (path.startsWith('/categories')) return '分类管理';
     if (path.startsWith('/tiers')) return '达人等级管理';
     if (path.startsWith('/users')) return '用户管理';
@@ -66,6 +67,7 @@ const Layout = () => {
         { path: '/content-calendar', icon: '📅', label: '内容排期日历', roles: ['admin', 'operator', 'user'] },
         { path: '/finance', icon: '💰', label: '财务台账', roles: ['admin', 'operator'] },
         { path: '/competitive-intelligence', icon: '🔍', label: '竞品情报', roles: ['admin', 'operator', 'user'] },
+        { path: '/message-templates', icon: '📝', label: '消息模板库', roles: ['admin', 'operator', 'user'] },
         { path: '/categories', icon: '📁', label: '分类管理', roles: ['admin', 'operator'] },
         { path: '/tiers', icon: '⭐', label: '达人等级', roles: ['admin', 'operator'] }
       ]

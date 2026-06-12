@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from .config import settings
 from .database import engine, Base
 from .utils.logger import logger, log_request
-from .routers import auth, users, profile, categories, influencers, collaborations, statistics, tiers, deliverables, brands, brand_portal, pipelines, competitive_intelligence
+from .routers import auth, users, profile, categories, influencers, collaborations, statistics, tiers, deliverables, brands, brand_portal, pipelines, competitive_intelligence, message_templates
 
 # Import all models to ensure they are registered
 from .models.user import User, Role
@@ -23,6 +23,7 @@ from .models.price_history import PriceHistory
 from .models.brand import Brand, BrandCollaborationAuthorization
 from .models.pipeline import InfluencerPipeline
 from .models.competitive_intelligence import CompetitiveIntelligence
+from .models.message_template import MessageTemplate
 
 
 @asynccontextmanager
@@ -95,6 +96,7 @@ app.include_router(brands.router)
 app.include_router(brand_portal.router)
 app.include_router(pipelines.router)
 app.include_router(competitive_intelligence.router)
+app.include_router(message_templates.router)
 
 
 @app.get("/", tags=["健康检查"])
