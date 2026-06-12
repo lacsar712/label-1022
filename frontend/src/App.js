@@ -20,6 +20,7 @@ import BrandCollaborationDetail from './pages/Brand/CollaborationDetail';
 import BrandInfluencers from './pages/Brand/Influencers';
 import OperatorKPIDashboard from './pages/Operator/KPIDashboard';
 import FinanceLedgerList from './pages/Finance/List';
+import CompetitiveIntelligenceList from './pages/CompetitiveIntelligence/List';
 import Toast from './components/Toast';
 
 const ProtectedRoute = ({ children, roles }) => {
@@ -119,6 +120,11 @@ const AppRoutes = () => {
         <Route path="/finance" element={
           <ProtectedRoute roles={['admin', 'operator']}>
             <FinanceLedgerList />
+          </ProtectedRoute>
+        } />
+        <Route path="/competitive-intelligence" element={
+          <ProtectedRoute roles={['admin', 'operator', 'user']}>
+            <CompetitiveIntelligenceList />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={<Profile />} />

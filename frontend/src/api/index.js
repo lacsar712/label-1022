@@ -242,4 +242,12 @@ export const financeLedgerApi = {
   deletePayment: (id, paymentId) => api.delete(`/finance-ledger/${id}/payments/${paymentId}`)
 };
 
+export const competitiveIntelligenceApi = {
+  getList: (params) => api.get('/competitive-intelligence', { params }),
+  getById: (id) => api.get(`/competitive-intelligence/${id}`),
+  create: (data) => api.post('/competitive-intelligence', data),
+  update: (id, data) => api.put(`/competitive-intelligence/${id}`, data),
+  delete: (id) => api.delete(`/competitive-intelligence/${id}`)
+};
+
 export default api;

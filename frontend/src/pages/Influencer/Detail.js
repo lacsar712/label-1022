@@ -10,7 +10,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { influencersApi, collaborationsApi } from '../../api';
+import { influencersApi, collaborationsApi, competitiveIntelligenceApi } from '../../api';
 import { useAuth, isOperator } from '../../contexts/AuthContext';
 
 const InfluencerDetail = () => {
@@ -25,6 +25,8 @@ const InfluencerDetail = () => {
   const [collaborations, setCollaborations] = useState([]);
   const [priceHistory, setPriceHistory] = useState([]);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
+  const [competitiveIntel, setCompetitiveIntel] = useState([]);
+  const [competitiveIntelLoading, setCompetitiveIntelLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -43,6 +45,7 @@ const InfluencerDetail = () => {
       if (canViewPriceHistory) {
         fetchPriceHistory();
       }
+      fetchCompetitiveIntel();
     } catch (error) {
       navigate('/influencers');
     } finally {
@@ -59,6 +62,18 @@ const InfluencerDetail = () => {
       console.error('Failed to fetch price history:', error);
     } finally {
       setPriceHistoryLoading(false);
+    }
+  };
+
+  const fetchCompetitiveIntel = async () => {
+    try {
+      setCompetitiveIntelLoading(true);
+      const data = await competitiveIntelligenceApi.getList({ influencer_id: id, page_size: 100 });
+      setCompetitiveIntel(data.items);
+    } catch (error) {
+      console.error('Failed to fetch competitive intelligence:', error);
+    } finally {
+      setCompetitiveIntelLoading(false);
     }
   };
 
@@ -578,6 +593,80 @@ const InfluencerDetail = () => {
           )}
         </div>
       </div>
+
+      {competitiveIntel.length > 0 && (
+        <div className="card" style={{ marginTop: '24px' }}>
+          <div className="card-header" style={{ 
+            background: 'linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%)',
+            borderBottom: '1px solid #ffd591'
+          }}>
+            <h3 className="card-title" style={{ color: '#d46b08', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⚠️</span>
+              竞品合作记录
+              <span className="tag tag-warning" style={{ marginLeft: '8px' }}>
+                {competitiveIntel.length} 条记录
+              </span>
+            </h3>
+            <div style={{ fontSize: '13px', color: '#d46b08' }}>
+              该达人已被竞品锁定，建议评估谈判优先级与报价策略
+            </div>
+          </div>
+          <div className="card-body" style={{ padding: 0 }}>
+            {competitiveIntelLoading ? (
+              <div className="loading" style={{ minHeight: '120px' }}>
+                <div className="spinner"></div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table className="table">
+                  <thead>
+                    <tr style={{ backgroundColor: '#fffbe6' }}>
+                      <th style={{ color: '#d46b08' }}>竞品名称</th>
+                      <th style={{ color: '#d46b08' }}>推测合作金额</th>
+                      <th style={{ color: '#d46b08' }}>信息来源</th>
+                      <th style={{ color: '#d46b08' }}>发现日期</th>
+                      <th style={{ color: '#d46b08' }}>录入人</th>
+                      <th style={{ color: '#d46b08' }}>备注</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {competitiveIntel.map(record => (
+                      <tr key={record.id} style={{ 
+                        backgroundColor: 'rgba(255, 196, 0, 0.05)' 
+                      }}>
+                        <td style={{ fontWeight: '600', color: '#d46b08' }}>
+                          {record.competitor_name}
+                        </td>
+                        <td style={{ color: '#f5222d', fontWeight: '500' }}>
+                          {formatMoney(record.estimated_amount)}
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)' }}>
+                          {record.source || '-'}
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {formatDate(record.discovery_date)}
+                        </td>
+                        <td>
+                          {record.creator 
+                            ? (record.creator.nickname || record.creator.username) 
+                            : '-'}
+                        </td>
+                        <td style={{ 
+                          maxWidth: '300px', 
+                          color: 'var(--text-secondary)',
+                          fontSize: '13px'
+                        }}>
+                          {record.notes || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
