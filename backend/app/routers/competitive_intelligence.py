@@ -96,7 +96,7 @@ async def create_competitive_intelligence(
 
     new_record = CompetitiveIntelligence(
         **data.model_dump(),
-        user_id=current_user.id
+        creator_id=current_user.id
     )
     db.add(new_record)
     db.commit()

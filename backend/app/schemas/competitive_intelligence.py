@@ -12,7 +12,7 @@ class CompetitiveIntelligenceBase(BaseModel):
     influencer_id: int
     estimated_amount: Decimal = Decimal('0')
     source: Optional[str] = Field(None, max_length=500)
-    discovery_date: date
+    discovery_date: Optional[date] = None
     notes: Optional[str] = None
 
 
@@ -54,9 +54,9 @@ class CompetitiveIntelligenceResponse(BaseModel):
     influencer_id: int
     estimated_amount: Decimal
     source: Optional[str] = None
-    discovery_date: date
+    discovery_date: Optional[date] = None
     notes: Optional[str] = None
-    user_id: int
+    creator_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     influencer: Optional[InfluencerBrief] = None

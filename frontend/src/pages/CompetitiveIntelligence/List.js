@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { competitiveIntelligenceApi, influencersApi } from '../../api';
 import { useAuth, isOperator, isAdmin } from '../../contexts/AuthContext';
@@ -35,6 +35,7 @@ const CompetitiveIntelligenceList = () => {
   const [influencerOptions, setInfluencerOptions] = useState([]);
   const [influencerSearch, setInfluencerSearch] = useState('');
   const [showInfluencerDropdown, setShowInfluencerDropdown] = useState(false);
+  const influencerDropdownRef = useRef(null);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
@@ -42,6 +43,20 @@ const CompetitiveIntelligenceList = () => {
   useEffect(() => {
     fetchData();
   }, [pagination.page, pagination.page_size]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (influencerDropdownRef.current && !influencerDropdownRef.current.contains(event.target)) {
+        setShowInfluencerDropdown(false);
+      }
+    };
+    if (showInfluencerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInfluencerDropdown]);
 
   const fetchData = async () => {
     try {
@@ -91,7 +106,7 @@ const CompetitiveIntelligenceList = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setPagination(prev => ({ ...prev, page: 1 }));
-    fetchData();
+    setTimeout(fetchData, 0);
   };
 
   const handleReset = () => {
@@ -102,6 +117,7 @@ const CompetitiveIntelligenceList = () => {
       discovery_date_to: ''
     });
     setPagination(prev => ({ ...prev, page: 1 }));
+    setTimeout(fetchData, 0);
   };
 
   const openCreateModal = () => {
@@ -116,6 +132,7 @@ const CompetitiveIntelligenceList = () => {
     });
     setInfluencerSearch('');
     setInfluencerOptions([]);
+    setShowInfluencerDropdown(false);
     setShowModal(true);
   };
 
@@ -124,20 +141,29 @@ const CompetitiveIntelligenceList = () => {
     setFormData({
       competitor_name: record.competitor_name,
       influencer_id: record.influencer_id,
-      estimated_amount: record.estimated_amount,
+      estimated_amount: String(record.estimated_amount || ''),
       source: record.source || '',
-      discovery_date: record.discovery_date,
+      discovery_date: record.discovery_date || new Date().toISOString().split('T')[0],
       notes: record.notes || ''
     });
     setInfluencerSearch(record.influencer?.name || '');
+    setShowInfluencerDropdown(false);
     setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if (!formData.influencer_id) {
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { type: 'error', message: '请选择关联达人' }
+        }));
+        return;
+      }
+
       const submitData = {
         ...formData,
+        influencer_id: Number(formData.influencer_id),
         estimated_amount: Number(formData.estimated_amount) || 0
       };
 
@@ -186,6 +212,13 @@ const CompetitiveIntelligenceList = () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('zh-CN');
+  };
+
+  const formatNumber = (num) => {
+    if (num >= 10000) {
+      return (num / 10000).toFixed(1) + '万';
+    }
+    return num?.toLocaleString() || '0';
   };
 
   const getSelectedInfluencerName = () => {
@@ -355,9 +388,9 @@ const CompetitiveIntelligenceList = () => {
 
       <Modal
         title={editingRecord ? '编辑竞品情报' : '新增竞品情报'}
-        open={showModal}
+        isOpen={showModal}
         onClose={() => setShowModal(false)}
-        width="600px"
+        size="large"
       >
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gap: '16px' }}>
@@ -390,7 +423,7 @@ const CompetitiveIntelligenceList = () => {
               </div>
             </div>
 
-            <div>
+            <div ref={influencerDropdownRef}>
               <label className="form-label">
                 关联达人 <span style={{ color: '#f5222d' }}>*</span>
               </label>
@@ -408,7 +441,6 @@ const CompetitiveIntelligenceList = () => {
                     }
                   }}
                   onFocus={() => setShowInfluencerDropdown(true)}
-                  required={!formData.influencer_id}
                 />
                 {showInfluencerDropdown && influencerOptions.length > 0 && (
                   <div
@@ -471,28 +503,29 @@ const CompetitiveIntelligenceList = () => {
               </div>
             </div>
 
-            <div>
-              <label className="form-label">信息来源</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="例如：小红书发现、抖音热门、达人主页"
-                value={formData.source}
-                onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-              />
-            </div>
-
-            <div>
-              <label className="form-label">
-                发现日期 <span style={{ color: '#f5222d' }}>*</span>
-              </label>
-              <input
-                type="date"
-                className="form-input"
-                value={formData.discovery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, discovery_date: e.target.value }))}
-                required
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label className="form-label">信息来源</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="例如：小红书发现、抖音热门、达人主页"
+                  value={formData.source}
+                  onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">
+                  发现日期 <span style={{ color: '#f5222d' }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  className="form-input"
+                  value={formData.discovery_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, discovery_date: e.target.value }))}
+                  required
+                />
+              </div>
             </div>
 
             <div>
@@ -519,24 +552,17 @@ const CompetitiveIntelligenceList = () => {
       </Modal>
 
       <ConfirmDialog
-        open={showDeleteConfirm}
+        isOpen={showDeleteConfirm}
         title="确认删除"
         message="确定要删除这条竞品情报记录吗？此操作无法撤销。"
         confirmText="删除"
         cancelText="取消"
         onConfirm={confirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-        danger
+        onClose={() => setShowDeleteConfirm(false)}
+        type="danger"
       />
     </div>
   );
-};
-
-const formatNumber = (num) => {
-  if (num >= 10000) {
-    return (num / 10000).toFixed(1) + '万';
-  }
-  return num?.toLocaleString() || '0';
 };
 
 export default CompetitiveIntelligenceList;
