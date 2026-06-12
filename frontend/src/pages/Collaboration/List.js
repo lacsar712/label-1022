@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { collaborationsApi, influencersApi } from '../../api';
-import { useAuth, isOperator } from '../../contexts/AuthContext';
+import { collaborationsApi, influencersApi, brandsApi } from '../../api';
+import { useAuth, isOperator, isAdmin } from '../../contexts/AuthContext';
 import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -11,6 +11,7 @@ import DeliverableDrawer from '../../components/DeliverableDrawer';
 const CollaborationList = () => {
   const { user } = useAuth();
   const canEdit = isOperator(user);
+  const canManageBrands = isAdmin(user) || isOperator(user);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -49,6 +50,15 @@ const CollaborationList = () => {
 
   // Filter: has pending deliverables
   const [hasPending, setHasPending] = useState(false);
+
+  const [showBrandAuthModal, setShowBrandAuthModal] = useState(false);
+  const [authCollabId, setAuthCollabId] = useState(null);
+  const [authCollabName, setAuthCollabName] = useState('');
+  const [brandAuthLoading, setBrandAuthLoading] = useState(false);
+  const [brandAuthSaving, setBrandAuthSaving] = useState(false);
+  const [allBrands, setAllBrands] = useState([]);
+  const [selectedBrandIds, setSelectedBrandIds] = useState([]);
+  const [collabBrandAuths, setCollabBrandAuths] = useState([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -245,6 +255,61 @@ const CollaborationList = () => {
     }
   };
 
+  const openBrandAuthModal = async (collab) => {
+    setAuthCollabId(collab.id);
+    setAuthCollabName(collab.project_name);
+    setShowBrandAuthModal(true);
+    setBrandAuthLoading(true);
+    try {
+      const [brandsRes] = await Promise.all([
+        brandsApi.getList({ page_size: 200 })
+      ]);
+      const brands = brandsRes.items || [];
+      setAllBrands(brands);
+
+      const brandAuthorizations = [];
+      for (const b of brands) {
+        try {
+          const auths = await brandsApi.getAuthorizations(b.id);
+          const arr = Array.isArray(auths) ? auths : auths.items || [];
+          const match = arr.find(a => a.collaboration_id === collab.id);
+          if (match) {
+            brandAuthorizations.push(match);
+          }
+        } catch (e) { /* ignore individual brand errors */ }
+      }
+      setCollabBrandAuths(brandAuthorizations);
+      setSelectedBrandIds(brandAuthorizations.map(a => a.brand_id));
+    } finally {
+      setBrandAuthLoading(false);
+    }
+  };
+
+  const toggleBrandId = (id) => {
+    setSelectedBrandIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const saveBrandAuthorizations = async () => {
+    try {
+      setBrandAuthSaving(true);
+      const existingBrandIds = collabBrandAuths.map(a => a.brand_id);
+      const toAdd = selectedBrandIds.filter(id => !existingBrandIds.includes(id));
+      const toRemove = collabBrandAuths.filter(a => !selectedBrandIds.includes(a.brand_id));
+
+      for (const brandId of toAdd) {
+        await brandsApi.createAuthorizations(brandId, { collaboration_ids: [authCollabId] });
+      }
+      for (const auth of toRemove) {
+        await brandsApi.deleteAuthorization(auth.brand_id, auth.id);
+      }
+      showToast('success', `品牌授权已更新：新增 ${toAdd.length} 个品牌，撤销 ${toRemove.length} 个品牌`);
+      setShowBrandAuthModal(false);
+      fetchData();
+    } finally {
+      setBrandAuthSaving(false);
+    }
+  };
+
   const formatMoney = (num) => {
     return '¥' + (num?.toLocaleString() || '0');
   };
@@ -403,7 +468,17 @@ const CollaborationList = () => {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {canManageBrands && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              style={{ color: 'var(--primary-color)' }}
+                              onClick={() => openBrandAuthModal(item)}
+                              title="配置哪些品牌可以看到这个合作"
+                            >
+                              品牌授权
+                            </button>
+                          )}
                           <button
                             className="btn btn-ghost btn-sm"
                             onClick={() => openDeliverableDrawer(item.id, item.project_name)}
@@ -639,6 +714,103 @@ const CollaborationList = () => {
         collaborationId={drawerCollabId}
         collaborationName={drawerCollabName}
       />
+
+      {/* Brand Authorization Modal */}
+      <Modal
+        isOpen={showBrandAuthModal}
+        onClose={() => setShowBrandAuthModal(false)}
+        title={`🏢 品牌可见性配置 - ${authCollabName}`}
+        size="large"
+        footer={<>
+          <div style={{ flex: 1, color: 'var(--text-secondary)', fontSize: '13px' }}>
+            已勾选 {selectedBrandIds.length} 个品牌
+          </div>
+          <button className="btn btn-secondary" onClick={() => setShowBrandAuthModal(false)}>取消</button>
+          <button
+            className="btn btn-primary"
+            onClick={saveBrandAuthorizations}
+            disabled={brandAuthLoading || brandAuthSaving}
+          >
+            {brandAuthSaving ? '保存中...' : '保存授权'}
+          </button>
+        </>}
+      >
+        <div style={{
+          padding: '12px',
+          background: 'linear-gradient(135deg, var(--primary-bg), var(--bg-secondary))',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          fontSize: '13px'
+        }}>
+          💡 勾选下方品牌，表示这些品牌方用户在其门户中可以查看本合作的进度、预算和效果数据。取消勾选即撤销该品牌的可见权限。
+        </div>
+
+        {brandAuthLoading ? (
+          <div className="loading" style={{ minHeight: '200px' }}>
+            <div className="spinner"></div>
+          </div>
+        ) : (
+          allBrands.length === 0 ? (
+            <div style={{ textAlign:'center', padding:'40px', color:'var(--text-secondary)' }}>
+              暂无品牌数据，请先在「系统管理 → 品牌方管理」中创建品牌
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '12px',
+              maxHeight: '50vh',
+              overflowY: 'auto',
+              padding: '4px'
+            }}>
+              {allBrands.map(b => {
+                const checked = selectedBrandIds.includes(b.id);
+                return (
+                  <label
+                    key={b.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '14px',
+                      border: '1px solid',
+                      borderColor: checked ? 'var(--primary-color)' : 'var(--border-color)',
+                      background: checked ? 'var(--primary-bg)' : 'var(--bg-primary)',
+                      borderRadius: '10px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ marginTop: '3px', flexShrink: 0 }}
+                      checked={checked}
+                      onChange={() => toggleBrandId(b.id)}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                        🏢 {b.name}
+                      </div>
+                      {b.industry && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                          {b.industry}
+                        </div>
+                      )}
+                      {(b.contact_name || b.contact_phone) && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                          {b.contact_name && <span>{b.contact_name}</span>}
+                          {b.contact_name && b.contact_phone && <span> · </span>}
+                          {b.contact_phone && <span>{b.contact_phone}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )
+        )}
+      </Modal>
     </div>
   );
 };
