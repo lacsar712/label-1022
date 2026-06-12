@@ -261,6 +261,23 @@ INSERT INTO collaborations (influencer_id, user_id, project_name, status, start_
 (9, 2, '品牌春节活动', 'pending', '2025-02-05', '2025-02-15', 60000.00, 0.00, '短视频', '春节主题搞笑短视频，融入品牌元素', 0, 0, 0, 0),
 (1, 1, '护肤品牌年度代言', 'in_progress', '2025-01-01', '2025-06-30', 80000.00, 40000.00, '图文', '每月发布护肤日常和产品推荐', 320000, 25000, 3200, 5800);
 
+-- Insert sample deliverables - 内容交付物示例
+INSERT INTO collaboration_deliverables (collaboration_id, platform, content_link, published_at, review_status, notes) VALUES
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a1b2c3d4e5f67890abcdef', '2025-01-16 10:00:00', 'approved', '首篇笔记：春季口红试色'),
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a2c3d4e5f67890abcdef1', '2025-01-20 14:30:00', 'approved', '第二篇：持久度测评'),
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a3d4e5f67890abcdef123', '2025-01-25 09:15:00', 'pending', '第三篇：唇部护理+口红叠涂技巧'),
+(2, '抖音', 'https://www.douyin.com/video/7312345678901234567', '2025-02-05 18:00:00', 'pending', '第一条短视频：春季穿搭合集'),
+(2, '抖音', 'https://www.douyin.com/video/7312345678901234568', '2025-02-10 20:00:00', 'rejected', '第二条：品牌联名开箱，植入太硬需重拍'),
+(3, 'B站', 'https://www.bilibili.com/video/BV1x12345678', '2025-01-12 12:00:00', 'approved', '探店视频：新开的日料店，时长12分钟'),
+(4, '微博', 'https://weibo.com/1234567890/L1abcdefgh', '2025-01-05 11:00:00', 'approved', '一月第一篇：北欧风家居好物'),
+(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b1c2d3e4f567890abcdef', '2025-01-15 16:00:00', 'approved', '一月第二篇：租房改造'),
+(4, '微博', 'https://weibo.com/1234567890/L2abcdefgh', '2025-02-01 10:00:00', 'pending', '二月第一篇：简约办公桌面'),
+(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b2d3e4f567890abcdef12', '2025-02-10 15:00:00', 'pending', '二月第二篇：小户型收纳神器'),
+(7, '快手', 'https://www.kuaishou.com/short-video/3x1234567890abcdefg', '2025-02-03 19:30:00', 'pending', '第一场直播回放剪辑：家用健身器材使用教程'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c1d2e3f4567890abcdef1', '2025-01-08 09:00:00', 'approved', '一月第一篇：冬季护肤routine'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c2e3f4567890abcdef123', '2025-02-01 11:00:00', 'pending', '二月第一篇：情人节约会妆容+护肤'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c3f4567890abcdef12345', '2025-02-12 08:30:00', 'rejected', '二月第二篇：产品成分解析，内容有误需修改');
+
 -- Insert sample price histories - 报价变更历史示例
 INSERT INTO price_histories (influencer_id, old_price, new_price, change_reason, operator_id, created_at) VALUES
 (1, 12000.00, 15000.00, '粉丝量增长，市场需求增加', 2, '2024-11-15 10:30:00'),
