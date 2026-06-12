@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import InfluencerList from './pages/Influencer/List';
 import InfluencerDetail from './pages/Influencer/Detail';
+import InfluencerPipeline from './pages/Influencer/Pipeline';
 import CollaborationList from './pages/Collaboration/List';
 import CategoryList from './pages/Category/List';
 import TierList from './pages/Tier/List';
@@ -87,6 +88,7 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/influencers" element={<InfluencerList />} />
         <Route path="/influencers/:id" element={<InfluencerDetail />} />
+        <Route path="/pipeline" element={<InfluencerPipeline />} />
         <Route path="/collaborations" element={<CollaborationList />} />
         <Route path="/categories" element={
           <ProtectedRoute roles={['admin', 'operator']}>

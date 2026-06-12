@@ -216,4 +216,16 @@ export const brandPortalApi = {
   getEngagementTrend: () => api.get('/brand-portal/engagement-trend')
 };
 
+// Pipelines API - 触达漏斗
+export const pipelinesApi = {
+  getList: (params) => api.get('/pipelines', { params }),
+  getById: (id) => api.get(`/pipelines/${id}`),
+  getStages: () => api.get('/pipelines/stages'),
+  getOwnerOptions: () => api.get('/pipelines/owners/options'),
+  create: (data) => api.post('/pipelines', data),
+  update: (id, data) => api.put(`/pipelines/${id}`, data),
+  updateStage: (id, stage) => api.patch(`/pipelines/${id}/stage`, null, { params: { stage } }),
+  delete: (id) => api.delete(`/pipelines/${id}`)
+};
+
 export default api;

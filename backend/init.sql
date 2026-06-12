@@ -267,6 +267,34 @@ INSERT INTO users (username, password_hash, nickname, email, role_id, brand_id, 
 ('brand_fashion', '$2b$12$b2w3HFknNkunYeCTS1jmyuieCSCViQWQbjSYlN5NuxtIx2H0KeM7e', '潮牌服饰-李总监', 'li@fashion.com', 4, 2, 'active'),
 ('brand_foodie', '$2b$12$b2w3HFknNkunYeCTS1jmyuieCSCViQWQbjSYlN5NuxtIx2H0KeM7e', '美味餐饮-王市场', 'wang@foodie.com', 4, 3, 'active');
 
+-- Influencer Pipelines table - 达人触达漏斗
+CREATE TABLE IF NOT EXISTS influencer_pipelines (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    influencer_id INT NOT NULL UNIQUE,
+    stage VARCHAR(30) NOT NULL DEFAULT 'to_contact',
+    notes TEXT,
+    owner_id INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_stage (stage),
+    INDEX idx_owner (owner_id),
+    FOREIGN KEY (influencer_id) REFERENCES influencers(id) ON DELETE CASCADE,
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Insert sample pipeline data - 示例触达漏斗数据
+INSERT INTO influencer_pipelines (influencer_id, stage, notes, owner_id, created_at) VALUES
+(1, 'signed', '已签署年度合作协议，报价¥15,000/条', 2, '2024-11-01 10:00:00'),
+(2, 'quote_confirmed', '对方确认报价¥25,000，等待合同审批', 2, '2024-11-15 14:30:00'),
+(3, 'communicating', '已建立联系，对方对合作表示兴趣，等待具体方案', 2, '2024-12-01 09:20:00'),
+(4, 'signed', '年度家居品牌合作已签约，预算¥100,000', 1, '2024-10-20 16:00:00'),
+(5, 'communicating', '已发送合作资料，跟进中', 2, '2024-12-10 11:15:00'),
+(6, 'to_contact', '母婴领域潜力达人，待电话联系', 2, '2025-01-05 08:30:00'),
+(7, 'quote_confirmed', '健身器材推广报价¥16,000已确认，下周签约', 2, '2025-01-10 15:45:00'),
+(8, 'signed', '知识分享官年度合作，报价¥28,000/条', 1, '2024-11-25 13:00:00'),
+(9, 'abandoned', '对方档期已满，暂时无法合作，3个月后再跟进', 2, '2024-12-20 10:30:00'),
+(10, 'to_contact', '微信护肤专家，初步评估适合中小预算合作', 2, '2025-01-15 09:00:00');
+
 -- Insert sample brand-collaboration authorizations - 品牌方授权合作示例
 -- 美肌美妆授权可见的合作: 春季新品口红推广(1)、护肤品牌年度代言(10)
 INSERT INTO brand_collaboration_authorizations (brand_id, collaboration_id, granted_by, notes) VALUES

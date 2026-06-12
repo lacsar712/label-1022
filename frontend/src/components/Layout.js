@@ -35,6 +35,7 @@ const Layout = () => {
     const path = location.pathname;
     if (path === '/dashboard') return '仪表盘';
     if (path.startsWith('/influencers')) return 'Influencer管理';
+    if (path === '/pipeline') return '触达Pipeline';
     if (path.startsWith('/collaborations')) return '合作管理';
     if (path.startsWith('/categories')) return '分类管理';
     if (path.startsWith('/tiers')) return '达人等级管理';
@@ -56,6 +57,7 @@ const Layout = () => {
     {
       section: '业务管理',
       items: [
+        { path: '/pipeline', icon: '📊', label: '触达Pipeline', roles: ['admin', 'operator', 'user'] },
         { path: '/influencers', icon: '👤', label: 'Influencer管理', roles: ['admin', 'operator', 'user'] },
         { path: '/collaborations', icon: '🤝', label: '合作管理', roles: ['admin', 'operator', 'user'] },
         { path: '/categories', icon: '📁', label: '分类管理', roles: ['admin', 'operator'] },
