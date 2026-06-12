@@ -1183,7 +1183,11 @@ const InfluencerDetail = () => {
                   <h3 className="card-title">预览结果</h3>
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={() => copyToClipboard(previewResult.content)}
+                    onClick={() => copyToClipboard(
+                      previewResult.subject
+                        ? `主题：${previewResult.subject}\n\n${previewResult.content}`
+                        : previewResult.content
+                    )}
                   >
                     复制文案
                   </button>
