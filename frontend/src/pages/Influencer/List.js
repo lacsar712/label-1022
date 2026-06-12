@@ -38,6 +38,7 @@ const InfluencerList = () => {
   const [saving, setSaving] = useState(false);
   const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
   const tierDropdownRef = useRef(null);
+  const [originalCostPerPost, setOriginalCostPerPost] = useState(null);
   
   // Delete
   const [deleteId, setDeleteId] = useState(null);
@@ -117,6 +118,7 @@ const InfluencerList = () => {
 
   const openCreateModal = () => {
     setEditingId(null);
+    setOriginalCostPerPost(null);
     setFormData({
       name: '',
       platform: '抖音',
@@ -132,7 +134,8 @@ const InfluencerList = () => {
       cost_per_post: 0,
       engagement_rate: 0,
       status: 'active',
-      notes: ''
+      notes: '',
+      change_reason: ''
     });
     setFormErrors({});
     setShowModal(true);
@@ -142,6 +145,7 @@ const InfluencerList = () => {
     try {
       const data = await influencersApi.getById(id);
       setEditingId(id);
+      setOriginalCostPerPost(data.cost_per_post);
       setFormData({
         name: data.name || '',
         platform: data.platform || '抖音',
@@ -157,7 +161,8 @@ const InfluencerList = () => {
         cost_per_post: data.cost_per_post || 0,
         engagement_rate: data.engagement_rate || 0,
         status: data.status || 'active',
-        notes: data.notes || ''
+        notes: data.notes || '',
+        change_reason: ''
       });
       setFormErrors({});
       setShowModal(true);
@@ -198,7 +203,17 @@ const InfluencerList = () => {
       };
       
       if (editingId) {
-        await influencersApi.update(editingId, submitData);
+        const priceChanged = originalCostPerPost !== null &&
+          parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost);
+        
+        const payload = { ...submitData };
+        if (priceChanged && formData.change_reason?.trim()) {
+          payload.change_reason = formData.change_reason.trim();
+        } else if (!priceChanged) {
+          payload.change_reason = undefined;
+        }
+        
+        await influencersApi.update(editingId, payload);
         showToast('success', '更新成功');
       } else {
         await influencersApi.create(submitData);
@@ -687,10 +702,29 @@ const InfluencerList = () => {
         
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">单条报价 (元)</label>
+            <label className="form-label">
+              单条报价 (元)
+              {editingId && originalCostPerPost !== null &&
+                parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost) && (
+                <span style={{
+                  marginLeft: '8px',
+                  fontSize: '12px',
+                  color: '#fa8c16',
+                  fontWeight: '500'
+                }}>
+                  ⚠️ 已变动（原价 ¥{parseFloat(originalCostPerPost).toLocaleString()}）
+                </span>
+              )}
+            </label>
             <input
               type="number"
               className="form-input"
+              style={{
+                borderColor: editingId && originalCostPerPost !== null &&
+                  parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost)
+                  ? '#fa8c16'
+                  : undefined
+              }}
               value={formData.cost_per_post || 0}
               onChange={(e) => setFormData({ ...formData, cost_per_post: e.target.value })}
             />
@@ -706,6 +740,55 @@ const InfluencerList = () => {
             />
           </div>
         </div>
+
+        {editingId && (
+          <div className="form-group">
+            <label className="form-label">
+            {originalCostPerPost !== null &&
+              parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost) ? (
+              <span style={{ color: '#fa8c16', fontWeight: '500' }}>
+            变更原因 *
+            </span>
+          ) : (
+              '变更原因'
+            )}
+          </label>
+            <textarea
+              className="form-textarea"
+              rows={2}
+              placeholder={
+                originalCostPerPost !== null &&
+                  parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost)
+                  ? '请填写本次调价的背景/原因，将记录在报价历史中'
+                  : '报价未变动，无需填写'
+              }
+              value={formData.change_reason || ''}
+              onChange={(e) => setFormData({ ...formData, change_reason: e.target.value })}
+              disabled={
+                originalCostPerPost !== null &&
+                  parseFloat(formData.cost_per_post) === parseFloat(originalCostPerPost)
+              }
+              style={{
+                opacity:
+                  originalCostPerPost !== null &&
+                    parseFloat(formData.cost_per_post) === parseFloat(originalCostPerPost)
+                    ? 0.5
+                    : undefined
+              }}
+            />
+            {originalCostPerPost !== null &&
+              parseFloat(formData.cost_per_post) !== parseFloat(originalCostPerPost) &&
+              !formData.change_reason?.trim() && (
+                <div style={{
+                  fontSize: '12px',
+                  color: '#fa8c16',
+                  marginTop: '4px'
+                }}>
+                  建议填写，便于后续议价/续约时查阅报价依据
+                </div>
+              )}
+          </div>
+        )}
         
         <div className="form-row">
           <div className="form-group">
