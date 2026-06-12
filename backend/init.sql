@@ -248,35 +248,35 @@ INSERT INTO influencers (name, platform, account_id, followers, category_id, tie
 ('搞笑小王', '抖音', 'funnyking', 3200000, 9, 1, '周经理', '13800138009', 'zhou@example.com', '搞笑,剧情,段子', 50000.00, 9.50, 'active', '抖音搞笑领域头部达人'),
 ('护肤专家', '微信', 'skinexpert', 280000, 1, 3, '吴经理', '13800138010', 'wu@example.com', '护肤,成分,测评', 10000.00, 4.30, 'active', '微信公众号护肤专家');
 
--- Insert sample collaborations
+-- Insert sample collaborations (dates adjusted to current year/month for demo purposes)
 INSERT INTO collaborations (influencer_id, user_id, project_name, status, start_date, end_date, budget, actual_cost, content_type, content_requirements, views, likes, comments, shares) VALUES
-(1, 2, '春季新品口红推广', 'completed', '2025-01-15', '2025-01-30', 15000.00, 15000.00, '图文', '发布3篇小红书笔记，突出产品色号和持久度', 125000, 8500, 620, 1200),
-(2, 2, '男装品牌联名活动', 'in_progress', '2025-02-01', '2025-02-28', 30000.00, 15000.00, '短视频', '发布2条抖音短视频，展示穿搭效果', 85000, 5200, 380, 850),
-(3, 2, '餐厅开业推广', 'completed', '2025-01-10', '2025-01-20', 20000.00, 18000.00, '长视频', 'B站探店视频，时长10-15分钟', 230000, 15000, 2100, 3500),
-(4, 1, '家居品牌年度合作', 'in_progress', '2025-01-01', '2025-12-31', 100000.00, 35000.00, '图文', '每月发布2篇家居好物推荐', 580000, 42000, 5800, 12000),
-(5, 2, '新款手机评测', 'pending', '2025-02-15', '2025-02-28', 25000.00, 0.00, '短视频', '发布产品开箱和深度评测视频', 0, 0, 0, 0),
-(6, 2, '婴儿用品种草', 'completed', '2025-01-05', '2025-01-15', 12000.00, 12000.00, '图文', '发布5篇母婴好物推荐笔记', 95000, 7200, 890, 1500),
-(7, 2, '健身器材推广', 'in_progress', '2025-02-01', '2025-02-15', 18000.00, 9000.00, '直播', '快手直播介绍健身器材使用方法', 45000, 3200, 420, 280),
-(8, 1, '在线教育平台推广', 'completed', '2024-12-01', '2024-12-31', 30000.00, 30000.00, '长视频', 'B站发布学习方法分享视频，植入平台', 420000, 35000, 4200, 8500),
-(9, 2, '品牌春节活动', 'pending', '2025-02-05', '2025-02-15', 60000.00, 0.00, '短视频', '春节主题搞笑短视频，融入品牌元素', 0, 0, 0, 0),
-(1, 1, '护肤品牌年度代言', 'in_progress', '2025-01-01', '2025-06-30', 80000.00, 40000.00, '图文', '每月发布护肤日常和产品推荐', 320000, 25000, 3200, 5800);
+(1, 2, '春季新品口红推广', 'completed', '2026-05-15', '2026-05-30', 15000.00, 15000.00, '图文', '发布3篇小红书笔记，突出产品色号和持久度', 125000, 8500, 620, 1200),
+(2, 2, '男装品牌联名活动', 'in_progress', '2026-06-01', '2026-06-30', 30000.00, 15000.00, '短视频', '发布2条抖音短视频，展示穿搭效果', 85000, 5200, 380, 850),
+(3, 2, '餐厅开业推广', 'completed', '2026-05-10', '2026-05-20', 20000.00, 18000.00, '长视频', 'B站探店视频，时长10-15分钟', 230000, 15000, 2100, 3500),
+(4, 1, '家居品牌年度合作', 'in_progress', '2026-01-01', '2026-12-31', 100000.00, 35000.00, '图文', '每月发布2篇家居好物推荐', 580000, 42000, 5800, 12000),
+(5, 2, '新款手机评测', 'pending', '2026-06-15', '2026-06-28', 25000.00, 0.00, '短视频', '发布产品开箱和深度评测视频', 0, 0, 0, 0),
+(6, 2, '婴儿用品种草', 'completed', '2026-05-05', '2026-05-15', 12000.00, 12000.00, '图文', '发布5篇母婴好物推荐笔记', 95000, 7200, 890, 1500),
+(7, 2, '健身器材推广', 'in_progress', '2026-06-01', '2026-06-15', 18000.00, 9000.00, '直播', '快手直播介绍健身器材使用方法', 45000, 3200, 420, 280),
+(8, 1, '在线教育平台推广', 'completed', '2026-04-01', '2026-04-30', 30000.00, 30000.00, '长视频', 'B站发布学习方法分享视频，植入平台', 420000, 35000, 4200, 8500),
+(9, 2, '品牌夏季活动', 'pending', '2026-06-20', '2026-07-05', 60000.00, 0.00, '短视频', '夏日主题搞笑短视频，融入品牌元素', 0, 0, 0, 0),
+(1, 1, '护肤品牌年度代言', 'in_progress', '2026-01-01', '2026-12-31', 80000.00, 40000.00, '图文', '每月发布护肤日常和产品推荐', 320000, 25000, 3200, 5800);
 
--- Insert sample deliverables - 内容交付物示例
+-- Insert sample deliverables - 内容交付物示例 (dates adjusted to 2026-05/06 for demo)
 INSERT INTO collaboration_deliverables (collaboration_id, platform, content_link, published_at, review_status, notes) VALUES
-(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a1b2c3d4e5f67890abcdef', '2025-01-16 10:00:00', 'approved', '首篇笔记：春季口红试色'),
-(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a2c3d4e5f67890abcdef1', '2025-01-20 14:30:00', 'approved', '第二篇：持久度测评'),
-(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a3d4e5f67890abcdef123', '2025-01-25 09:15:00', 'pending', '第三篇：唇部护理+口红叠涂技巧'),
-(2, '抖音', 'https://www.douyin.com/video/7312345678901234567', '2025-02-05 18:00:00', 'pending', '第一条短视频：春季穿搭合集'),
-(2, '抖音', 'https://www.douyin.com/video/7312345678901234568', '2025-02-10 20:00:00', 'rejected', '第二条：品牌联名开箱，植入太硬需重拍'),
-(3, 'B站', 'https://www.bilibili.com/video/BV1x12345678', '2025-01-12 12:00:00', 'approved', '探店视频：新开的日料店，时长12分钟'),
-(4, '微博', 'https://weibo.com/1234567890/L1abcdefgh', '2025-01-05 11:00:00', 'approved', '一月第一篇：北欧风家居好物'),
-(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b1c2d3e4f567890abcdef', '2025-01-15 16:00:00', 'approved', '一月第二篇：租房改造'),
-(4, '微博', 'https://weibo.com/1234567890/L2abcdefgh', '2025-02-01 10:00:00', 'pending', '二月第一篇：简约办公桌面'),
-(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b2d3e4f567890abcdef12', '2025-02-10 15:00:00', 'pending', '二月第二篇：小户型收纳神器'),
-(7, '快手', 'https://www.kuaishou.com/short-video/3x1234567890abcdefg', '2025-02-03 19:30:00', 'pending', '第一场直播回放剪辑：家用健身器材使用教程'),
-(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c1d2e3f4567890abcdef1', '2025-01-08 09:00:00', 'approved', '一月第一篇：冬季护肤routine'),
-(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c2e3f4567890abcdef123', '2025-02-01 11:00:00', 'pending', '二月第一篇：情人节约会妆容+护肤'),
-(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c3f4567890abcdef12345', '2025-02-12 08:30:00', 'rejected', '二月第二篇：产品成分解析，内容有误需修改');
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a1b2c3d4e5f67890abcdef', '2026-05-16 10:00:00', 'approved', '首篇笔记：春季口红试色'),
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a2c3d4e5f67890abcdef1', '2026-05-20 14:30:00', 'approved', '第二篇：持久度测评'),
+(1, '小红书', 'https://xiaohongshu.com/discovery/item/65a3d4e5f67890abcdef123', '2026-05-25 09:15:00', 'pending', '第三篇：唇部护理+口红叠涂技巧'),
+(2, '抖音', 'https://www.douyin.com/video/7312345678901234567', '2026-06-05 18:00:00', 'pending', '第一条短视频：夏季穿搭合集'),
+(2, '抖音', 'https://www.douyin.com/video/7312345678901234568', '2026-06-08 20:00:00', 'rejected', '第二条：品牌联名开箱，植入太硬需重拍'),
+(3, 'B站', 'https://www.bilibili.com/video/BV1x12345678', '2026-05-12 12:00:00', 'approved', '探店视频：新开的日料店，时长12分钟'),
+(4, '微博', 'https://weibo.com/1234567890/L1abcdefgh', '2026-05-05 11:00:00', 'approved', '五月第一篇：北欧风家居好物'),
+(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b1c2d3e4f567890abcdef', '2026-05-15 16:00:00', 'approved', '五月第二篇：租房改造'),
+(4, '微博', 'https://weibo.com/1234567890/L2abcdefgh', '2026-06-03 10:00:00', 'pending', '六月第一篇：简约办公桌面'),
+(4, '小红书', 'https://xiaohongshu.com/discovery/item/65b2d3e4f567890abcdef12', '2026-06-10 15:00:00', 'pending', '六月第二篇：小户型收纳神器'),
+(7, '快手', 'https://www.kuaishou.com/short-video/3x1234567890abcdefg', '2026-06-03 19:30:00', 'pending', '第一场直播回放剪辑：家用健身器材使用教程'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c1d2e3f4567890abcdef1', '2026-05-08 09:00:00', 'approved', '五月第一篇：换季护肤routine'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c2e3f4567890abcdef123', '2026-06-01 11:00:00', 'pending', '六月第一篇：夏日清爽妆容+护肤'),
+(10, '小红书', 'https://xiaohongshu.com/discovery/item/65c3f4567890abcdef12345', '2026-06-01 08:30:00', 'rejected', '六月第二篇：产品成分解析，内容有误需修改');
 
 -- Insert sample price histories - 报价变更历史示例
 INSERT INTO price_histories (influencer_id, old_price, new_price, change_reason, operator_id, created_at) VALUES

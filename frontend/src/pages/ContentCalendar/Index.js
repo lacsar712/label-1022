@@ -4,6 +4,13 @@ import DeliverableDrawer from '../../components/DeliverableDrawer';
 
 const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
+const formatLocalDate = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const ContentCalendar = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(false);
@@ -26,8 +33,8 @@ const ContentCalendar = () => {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       
-      const startStr = firstDay.toISOString().split('T')[0];
-      const endStr = lastDay.toISOString().split('T')[0];
+      const startStr = formatLocalDate(firstDay);
+      const endStr = formatLocalDate(lastDay);
       
       const data = await deliverablesApi.getCalendar(startStr, endStr);
       setDeliverables(data.items || []);
@@ -69,10 +76,12 @@ const ContentCalendar = () => {
   }, [currentMonth]);
 
   const getDeliverablesByDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(date);
     return deliverables.filter(item => {
       if (!item.published_at) return false;
-      const itemDate = new Date(item.published_at).toISOString().split('T')[0];
+      const d = new Date(item.published_at);
+      if (isNaN(d.getTime())) return false;
+      const itemDate = formatLocalDate(d);
       return itemDate === dateStr;
     });
   };
