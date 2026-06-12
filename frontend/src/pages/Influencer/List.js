@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { influencersApi, categoriesApi, tiersApi } from '../../api';
 import { useAuth, isOperator } from '../../contexts/AuthContext';
@@ -36,6 +36,8 @@ const InfluencerList = () => {
   const [formData, setFormData] = useState({});
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
+  const tierDropdownRef = useRef(null);
   
   // Delete
   const [deleteId, setDeleteId] = useState(null);
@@ -80,6 +82,20 @@ const InfluencerList = () => {
   useEffect(() => {
     fetchOptions();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tierDropdownRef.current && !tierDropdownRef.current.contains(event.target)) {
+        setTierDropdownOpen(false);
+      }
+    };
+    if (tierDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [tierDropdownOpen]);
 
   useEffect(() => {
     fetchData();
@@ -190,6 +206,7 @@ const InfluencerList = () => {
       }
       
       setShowModal(false);
+      setTierDropdownOpen(false);
       fetchData();
     } catch (error) {
       // Handled by interceptor
@@ -447,12 +464,12 @@ const InfluencerList = () => {
       {/* Create/Edit Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setTierDropdownOpen(false); }}
         title={editingId ? '编辑Influencer' : '添加Influencer'}
         size="large"
         footer={
           <>
-            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>取消</button>
+            <button className="btn btn-secondary" onClick={() => { setShowModal(false); setTierDropdownOpen(false); }}>取消</button>
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? '保存中...' : '保存'}
             </button>
@@ -513,16 +530,149 @@ const InfluencerList = () => {
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">达人等级</label>
-            <select
-              className="form-select"
-              value={formData.tier_id || ''}
-              onChange={(e) => setFormData({ ...formData, tier_id: e.target.value })}
-            >
-              <option value="">未分级</option>
-              {tiers.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+            <div ref={tierDropdownRef} style={{ position: 'relative' }}>
+              <div
+                className="form-input"
+                style={{ 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  minHeight: '36px'
+                }}
+                onClick={() => setTierDropdownOpen(!tierDropdownOpen)}
+              >
+                {formData.tier_id ? (
+                  (() => {
+                    const selectedTier = tiers.find(t => t.id === parseInt(formData.tier_id));
+                    if (!selectedTier) return <span style={{ color: 'var(--text-tertiary)' }}>未分级</span>;
+                    return (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '2px 12px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        backgroundColor: selectedTier.color + '18',
+                        color: selectedTier.color,
+                        border: `1px solid ${selectedTier.color}40`
+                      }}>
+                        <span style={{ 
+                          width: '10px', 
+                          height: '10px', 
+                          borderRadius: '50%', 
+                          backgroundColor: selectedTier.color 
+                        }} />
+                        {selectedTier.name}
+                      </span>
+                    );
+                  })()
+                ) : (
+                  <span style={{ color: 'var(--text-tertiary)' }}>未分级</span>
+                )}
+                <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>▼</span>
+              </div>
+              
+              {tierDropdownOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  left: 0,
+                  right: 0,
+                  zIndex: 1000,
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  boxShadow: '0 6px 16px rgba(0, 0, 0, 0.12)',
+                  overflow: 'hidden'
+                }}>
+                  <div
+                    onClick={() => {
+                      setFormData({ ...formData, tier_id: '' });
+                      setTierDropdownOpen(false);
+                    }}
+                    style={{
+                      padding: '10px 14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      fontSize: '14px',
+                      color: !formData.tier_id ? 'var(--primary-color)' : 'var(--text-primary)',
+                      backgroundColor: !formData.tier_id ? 'var(--bg-hover)' : 'transparent',
+                      borderBottom: tiers.length > 0 ? '1px solid var(--border-light)' : 'none'
+                    }}
+                  >
+                    <span style={{ 
+                      width: '10px', 
+                      height: '10px', 
+                      borderRadius: '50%', 
+                      backgroundColor: 'var(--border-color)' 
+                    }} />
+                    未分级
+                  </div>
+                  {tiers.map(tier => (
+                    <div
+                      key={tier.id}
+                      onClick={() => {
+                        setFormData({ ...formData, tier_id: tier.id.toString() });
+                        setTierDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        fontSize: '14px',
+                        color: formData.tier_id == tier.id ? tier.color : 'var(--text-primary)',
+                        backgroundColor: formData.tier_id == tier.id ? tier.color + '10' : 'transparent',
+                        transition: 'background-color 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.tier_id != tier.id) {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.tier_id != tier.id) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ 
+                          width: '10px', 
+                          height: '10px', 
+                          borderRadius: '50%', 
+                          backgroundColor: tier.color 
+                        }} />
+                        <span style={{ fontWeight: formData.tier_id == tier.id ? '600' : '400' }}>
+                          {tier.name}
+                        </span>
+                      </div>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: 'var(--text-secondary)',
+                        padding: '2px 8px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        borderRadius: '10px'
+                      }}>
+                        {tier.max_followers === 0 
+                          ? `${(tier.min_followers / 10000).toFixed(0)}万+`
+                          : tier.min_followers === 0
+                            ? `0-${(tier.max_followers / 10000).toFixed(0)}万`
+                            : `${(tier.min_followers / 10000).toFixed(0)}-${(tier.max_followers / 10000).toFixed(0)}万`
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">粉丝数</label>
