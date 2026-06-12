@@ -600,6 +600,22 @@ input, select, textarea {
   background: var(--bg-tertiary);
 }
 
+.row-highlight-unpaid {
+  background-color: #fef2f2 !important;
+}
+
+.row-highlight-unpaid:hover {
+  background-color: #fee2e2 !important;
+}
+
+.row-highlight-partial {
+  background-color: #fffbeb !important;
+}
+
+.row-highlight-partial:hover {
+  background-color: #fef3c7 !important;
+}
+
 .table td {
   font-size: var(--font-size-sm);
   color: var(--text-primary);
@@ -1892,4 +1908,49 @@ input, select, textarea {
   font-weight: 600;
   border: 1px solid;
   flex-shrink: 0;
+}
+
+/* ===== Finance Statistics Cards ===== */
+.statistics-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.stat-card-icon {
+  font-size: 20px;
+}
+
+.stat-card-title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.stat-card-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ===== Link Button ===== */
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+}
+
+.btn-link:hover {
+  color: var(--primary-hover);
 }

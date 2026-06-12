@@ -19,6 +19,7 @@ import BrandCollaborations from './pages/Brand/Collaborations';
 import BrandCollaborationDetail from './pages/Brand/CollaborationDetail';
 import BrandInfluencers from './pages/Brand/Influencers';
 import OperatorKPIDashboard from './pages/Operator/KPIDashboard';
+import FinanceLedgerList from './pages/Finance/List';
 import Toast from './components/Toast';
 
 const ProtectedRoute = ({ children, roles }) => {
@@ -113,6 +114,11 @@ const AppRoutes = () => {
         <Route path="/operator-kpi" element={
           <ProtectedRoute roles={['admin', 'operator']}>
             <OperatorKPIDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/finance" element={
+          <ProtectedRoute roles={['admin', 'operator']}>
+            <FinanceLedgerList />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={<Profile />} />

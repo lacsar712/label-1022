@@ -228,4 +228,18 @@ export const pipelinesApi = {
   delete: (id) => api.delete(`/pipelines/${id}`)
 };
 
+// Finance Ledger API - 财务台账
+export const financeLedgerApi = {
+  getList: (params) => api.get('/finance-ledger', { params }),
+  getById: (id) => api.get(`/finance-ledger/${id}`),
+  create: (data) => api.post('/finance-ledger', data),
+  update: (id, data) => api.put(`/finance-ledger/${id}`, data),
+  delete: (id) => api.delete(`/finance-ledger/${id}`),
+  getSummary: (params) => api.get('/finance-ledger/summary', { params }),
+  getPaymentStatuses: () => api.get('/finance-ledger/payment-statuses'),
+  recordPayment: (id, data) => api.post(`/finance-ledger/${id}/payments`, data),
+  updatePayment: (id, paymentId, data) => api.put(`/finance-ledger/${id}/payments/${paymentId}`, data),
+  deletePayment: (id, paymentId) => api.delete(`/finance-ledger/${id}/payments/${paymentId}`)
+};
+
 export default api;
