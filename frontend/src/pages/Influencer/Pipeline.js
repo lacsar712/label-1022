@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pipelinesApi, influencersApi, usersApi } from '../../api';
+import { pipelinesApi } from '../../api';
 import { useAuth, isOperator, isAdmin } from '../../contexts/AuthContext';
 
 const STAGE_DEFS = [
@@ -11,6 +11,8 @@ const STAGE_DEFS = [
   { key: 'abandoned', label: '已放弃', color: '#ef4444', icon: '❌' }
 ];
 
+const PLATFORMS = ['全部', '抖音', '小红书', 'B站', '快手', '视频号', '微博', '微信公众号'];
+
 const Pipeline = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -18,7 +20,6 @@ const Pipeline = () => {
 
   const [loading, setLoading] = useState(true);
   const [pipelines, setPipelines] = useState([]);
-  const [stages, setStages] = useState(STAGE_DEFS);
   const [ownerOptions, setOwnerOptions] = useState([]);
   const [selectedPipeline, setSelectedPipeline] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -30,9 +31,41 @@ const Pipeline = () => {
   const [drawerOwnerId, setDrawerOwnerId] = useState('');
   const [drawerSaving, setDrawerSaving] = useState(false);
 
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [availableInfluencers, setAvailableInfluencers] = useState([]);
+  const [availableLoading, setAvailableLoading] = useState(false);
+  const [availableKeyword, setAvailableKeyword] = useState('');
+  const [availablePlatform, setAvailablePlatform] = useState('全部');
+  const [selectedAvailableInfluencer, setSelectedAvailableInfluencer] = useState(null);
+  const [addStage, setAddStage] = useState('to_contact');
+  const [addOwnerId, setAddOwnerId] = useState('');
+  const [addNotes, setAddNotes] = useState('');
+  const [addSaving, setAddSaving] = useState(false);
+
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const menuRef = useRef(null);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (addModalOpen) {
+      fetchAvailableInfluencers();
+    }
+  }, [addModalOpen, availableKeyword, availablePlatform]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setActiveMenuId(null);
+      }
+    };
+    if (activeMenuId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeMenuId]);
 
   const fetchData = async () => {
     try {
@@ -47,6 +80,22 @@ const Pipeline = () => {
       console.error('Failed to fetch pipeline data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableInfluencers = async () => {
+    try {
+      setAvailableLoading(true);
+      const params = {};
+      if (availableKeyword) params.keyword = availableKeyword;
+      if (availablePlatform && availablePlatform !== '全部') params.platform = availablePlatform;
+      const data = await pipelinesApi.getAvailableInfluencers(params);
+      setAvailableInfluencers(data || []);
+    } catch (error) {
+      console.error('Failed to fetch available influencers:', error);
+      setAvailableInfluencers([]);
+    } finally {
+      setAvailableLoading(false);
     }
   };
 
@@ -197,9 +246,10 @@ const Pipeline = () => {
         return;
       }
       await pipelinesApi.update(selectedPipeline.id, updateData);
+      const updatedOwner = newOwnerId ? ownerOptions.find(o => o.id === newOwnerId) : null;
       setPipelines(prev => prev.map(p =>
         p.id === selectedPipeline.id
-          ? { ...p, notes: drawerNotes, owner_id: newOwnerId, owner: newOwnerId ? ownerOptions.find(o => o.id === newOwnerId) : null }
+          ? { ...p, notes: drawerNotes, owner_id: newOwnerId, owner: updatedOwner }
           : p
       ));
       window.dispatchEvent(new CustomEvent('show-toast', {
@@ -210,6 +260,92 @@ const Pipeline = () => {
       console.error('Failed to save:', error);
     } finally {
       setDrawerSaving(false);
+    }
+  };
+
+  const handleMenuAction = async (action, pipeline) => {
+    setActiveMenuId(null);
+    if (!canEdit) return;
+
+    if (action === 'remove') {
+      if (!window.confirm(`确定要将 ${pipeline.influencer?.name} 移出 Pipeline 吗？`)) {
+        return;
+      }
+      try {
+        await pipelinesApi.delete(pipeline.id);
+        setPipelines(prev => prev.filter(p => p.id !== pipeline.id));
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { type: 'success', message: '已移出 Pipeline' }
+        }));
+      } catch (error) {
+        console.error('Failed to remove:', error);
+      }
+    } else if (action.startsWith('move_')) {
+      const targetStage = action.replace('move_', '');
+      if (targetStage === pipeline.stage) return;
+      try {
+        await pipelinesApi.updateStage(pipeline.id, targetStage);
+        setPipelines(prev => prev.map(p =>
+          p.id === pipeline.id ? { ...p, stage: targetStage } : p
+        ));
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { type: 'success', message: '已更新阶段' }
+        }));
+      } catch (error) {
+        console.error('Failed to update stage:', error);
+      }
+    } else if (action === 'view') {
+      navigate(`/influencers/${pipeline.influencer_id}`);
+    }
+  };
+
+  const handleOpenAddModal = () => {
+    setAddModalOpen(true);
+    setSelectedAvailableInfluencer(null);
+    setAvailableKeyword('');
+    setAvailablePlatform('全部');
+    setAddStage('to_contact');
+    setAddOwnerId(user?.id ? String(user.id) : '');
+    setAddNotes('');
+  };
+
+  const handleCloseAddModal = () => {
+    setAddModalOpen(false);
+    setSelectedAvailableInfluencer(null);
+    setAvailableKeyword('');
+    setAvailablePlatform('全部');
+    setAddStage('to_contact');
+    setAddOwnerId('');
+    setAddNotes('');
+  };
+
+  const handleAddToPipeline = async () => {
+    if (!selectedAvailableInfluencer || !canEdit) return;
+    try {
+      setAddSaving(true);
+      const createData = {
+        influencer_id: selectedAvailableInfluencer.id,
+        stage: addStage
+      };
+      if (addOwnerId) createData.owner_id = Number(addOwnerId);
+      if (addNotes) createData.notes = addNotes;
+
+      const newPipeline = await pipelinesApi.create(createData);
+      setPipelines(prev => [newPipeline, ...prev]);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { type: 'success', message: `${selectedAvailableInfluencer.name} 已成功纳入 Pipeline` }
+      }));
+      handleCloseAddModal();
+      setSelectedAvailableInfluencer(null);
+    } catch (error) {
+      console.error('Failed to add to pipeline:', error);
+      if (error.response?.data?.detail) {
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { type: 'error', message: error.response.data.detail }
+        }));
+      }
+    } finally {
+      setAddSaving(false);
     }
   };
 
@@ -225,13 +361,18 @@ const Pipeline = () => {
 
   return (
     <div className="pipeline-page">
-      <div className="page-header" style={{ marginBottom: '20px' }}>
+      <div className="pipeline-page-header">
         <div>
           <h1 className="page-title" style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>触达 Pipeline</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
             商务拓展漏斗看板 · 共 {filteredPipelines.length} 位在谈达人
           </p>
         </div>
+        {canEdit && (
+          <button className="btn btn-primary btn-lg" onClick={handleOpenAddModal}>
+            ➕ 纳入新达人
+          </button>
+        )}
       </div>
 
       <div className="pipeline-toolbar">
@@ -312,6 +453,50 @@ const Pipeline = () => {
                             <span className="pipeline-platform-tag">{pipeline.influencer?.platform || '-'}</span>
                           </div>
                         </div>
+                        {canEdit && (
+                          <div
+                            className="pipeline-card-menu"
+                            ref={activeMenuId === pipeline.id ? menuRef : null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === pipeline.id ? null : pipeline.id);
+                            }}
+                          >
+                            <span>⋮</span>
+                            {activeMenuId === pipeline.id && (
+                              <div className="pipeline-card-dropdown">
+                                <div
+                                  className="pipeline-dropdown-item"
+                                  onClick={(e) => { e.stopPropagation(); handleMenuAction('view', pipeline); }}
+                                >
+                                  👁️ 查看达人详情
+                                </div>
+                                <div className="pipeline-dropdown-divider"></div>
+                                <div className="pipeline-dropdown-label">移动到</div>
+                                {STAGE_DEFS.map(s => (
+                                  <div
+                                    key={s.key}
+                                    className={`pipeline-dropdown-item ${pipeline.stage === s.key ? 'disabled' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (pipeline.stage !== s.key) handleMenuAction(`move_${s.key}`, pipeline);
+                                    }}
+                                    style={pipeline.stage !== s.key ? { paddingLeft: '28px' } : { paddingLeft: '28px', opacity: 0.5 }}
+                                  >
+                                    {s.icon} {s.label}
+                                  </div>
+                                ))}
+                                <div className="pipeline-dropdown-divider"></div>
+                                <div
+                                  className="pipeline-dropdown-item danger"
+                                  onClick={(e) => { e.stopPropagation(); handleMenuAction('remove', pipeline); }}
+                                >
+                                  🗑️ 移出 Pipeline
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="pipeline-card-stats">
                         <div className="pipeline-card-stat">
@@ -449,6 +634,154 @@ const Pipeline = () => {
                   {drawerSaving ? '保存中...' : '保存'}
                 </button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {addModalOpen && (
+        <>
+          <div className="modal-overlay" onClick={handleCloseAddModal}></div>
+          <div className="modal" style={{ maxWidth: '760px', width: '90%' }}>
+            <div className="modal-header">
+              <div className="modal-title">纳入新达人</div>
+              <button className="modal-close" onClick={handleCloseAddModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="add-pipeline-filters">
+                <div className="search-input-wrapper" style={{ flex: 1 }}>
+                  <span className="search-icon">🔍</span>
+                  <input
+                    className="form-input"
+                    placeholder="搜索达人名称或账号"
+                    value={availableKeyword}
+                    onChange={(e) => setAvailableKeyword(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="form-select"
+                  style={{ width: '160px' }}
+                  value={availablePlatform}
+                  onChange={(e) => setAvailablePlatform(e.target.value)}
+                >
+                  {PLATFORMS.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="add-pipeline-list">
+                {availableLoading ? (
+                  <div className="add-pipeline-empty">
+                    <div className="spinner" style={{ width: '24px', height: '24px', marginBottom: '12px' }}></div>
+                    <span>加载中...</span>
+                  </div>
+                ) : availableInfluencers.length === 0 ? (
+                  <div className="add-pipeline-empty">
+                    <span style={{ fontSize: '40px', opacity: 0.3 }}>😕</span>
+                    <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
+                      {availableKeyword || availablePlatform !== '全部' ? '没有找到匹配的达人' : '所有达人都已在 Pipeline 中'}
+                    </p>
+                  </div>
+                ) : (
+                  availableInfluencers.map(inf => (
+                    <div
+                      key={inf.id}
+                      className={`add-influencer-item ${selectedAvailableInfluencer?.id === inf.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedAvailableInfluencer(inf)}
+                    >
+                      <div className="add-influencer-radio">
+                        <span className={`radio-circle ${selectedAvailableInfluencer?.id === inf.id ? 'checked' : ''}`}>
+                          {selectedAvailableInfluencer?.id === inf.id && '✓'}
+                        </span>
+                      </div>
+                      <div className="add-influencer-avatar">
+                        {inf.name?.[0] || '?'}
+                      </div>
+                      <div className="add-influencer-info">
+                        <div className="add-influencer-name">{inf.name}</div>
+                        <div className="add-influencer-meta">
+                          <span className="pipeline-platform-tag">{inf.platform}</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                            {formatNumber(inf.followers)} 粉丝
+                          </span>
+                          {inf.cost_per_post > 0 && (
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                              {formatMoney(inf.cost_per_post)}/条
+                            </span>
+                          )}
+                          {inf.category && (
+                            <span className="pipeline-platform-tag" style={{ background: 'var(--primary-light)', color: 'var(--primary-color)' }}>
+                              {inf.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {selectedAvailableInfluencer && (
+                <div className="add-pipeline-config">
+                  <div className="add-pipeline-config-title">
+                    <span>📋 跟进设置</span>
+                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      已选择：{selectedAvailableInfluencer.name}
+                    </span>
+                  </div>
+                  <div className="add-pipeline-config-grid">
+                    <div className="form-group">
+                      <label className="form-label">初始阶段</label>
+                      <select
+                        className="form-select"
+                        value={addStage}
+                        onChange={(e) => setAddStage(e.target.value)}
+                      >
+                        {STAGE_DEFS.map(s => (
+                          <option key={s.key} value={s.key}>{s.icon} {s.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">负责人</label>
+                      <select
+                        className="form-select"
+                        value={addOwnerId}
+                        onChange={(e) => setAddOwnerId(e.target.value)}
+                      >
+                        <option value="">未指派</option>
+                        {ownerOptions.map(o => (
+                          <option key={o.id} value={o.id}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">初始备注（可选）</label>
+                    <textarea
+                      className="form-textarea"
+                      rows={3}
+                      placeholder="记录合作意向、关注点、初步报价等..."
+                      value={addNotes}
+                      onChange={(e) => setAddNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={handleCloseAddModal}>
+                取消
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ marginLeft: '8px' }}
+                onClick={handleAddToPipeline}
+                disabled={!selectedAvailableInfluencer || addSaving || !canEdit}
+              >
+                {addSaving ? '添加中...' : '➕ 加入 Pipeline'}
+              </button>
             </div>
           </div>
         </>

@@ -115,7 +115,7 @@ async def get_owner_options(
     users = db.query(User).filter(
         User.status == "active"
     ).all()
-    
+
     return [
         {
             "id": u.id,
@@ -125,6 +125,80 @@ async def get_owner_options(
         }
         for u in users
     ]
+
+
+@router.get("/influencers/available", summary="获取可纳入Pipeline的达人列表")
+async def get_available_influencers(
+    keyword: Optional[str] = None,
+    platform: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取尚未纳入Pipeline的达人列表，支持关键词和平台筛选"""
+    subquery = db.query(InfluencerPipeline.influencer_id).subquery()
+    query = db.query(Influencer).filter(
+        Influencer.id.notin_(subquery),
+        Influencer.status == "active"
+    )
+
+    if keyword:
+        kw = f"%{keyword}%"
+        query = query.filter(
+            db.or_(
+                Influencer.name.like(kw),
+                Influencer.account_handle.like(kw)
+            )
+        )
+
+    if platform:
+        query = query.filter(Influencer.platform == platform)
+
+    influencers = query.order_by(Influencer.followers.desc()).limit(100).all()
+
+    return [
+        {
+            "id": inf.id,
+            "name": inf.name,
+            "platform": inf.platform,
+            "followers": inf.followers,
+            "avatar": inf.avatar,
+            "cost_per_post": float(inf.cost_per_post) if inf.cost_per_post else 0,
+            "category": inf.category.name if inf.category else None
+        }
+        for inf in influencers
+    ]
+
+
+@router.get("/influencer/{influencer_id}/check", summary="检查达人是否已在Pipeline中")
+async def check_influencer_in_pipeline(
+    influencer_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """检查指定达人是否已在Pipeline中，返回pipeline记录或null"""
+    pipeline = db.query(InfluencerPipeline).options(
+        joinedload(InfluencerPipeline.owner)
+    ).filter(
+        InfluencerPipeline.influencer_id == influencer_id
+    ).first()
+
+    if pipeline:
+        return {
+            "in_pipeline": True,
+            "pipeline_id": pipeline.id,
+            "stage": pipeline.stage,
+            "stage_label": STAGE_LABELS.get(pipeline.stage, pipeline.stage),
+            "owner_id": pipeline.owner_id,
+            "owner_name": pipeline.owner.nickname if pipeline.owner else None
+        }
+    return {
+        "in_pipeline": False,
+        "pipeline_id": None,
+        "stage": None,
+        "stage_label": None,
+        "owner_id": None,
+        "owner_name": None
+    }
 
 
 @router.post("", response_model=InfluencerPipelineResponse, summary="创建Pipeline记录")

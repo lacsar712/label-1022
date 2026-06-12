@@ -10,8 +10,8 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { influencersApi, collaborationsApi, competitiveIntelligenceApi, messageTemplatesApi } from '../../api';
-import { useAuth, isOperator } from '../../contexts/AuthContext';
+import { influencersApi, collaborationsApi, competitiveIntelligenceApi, messageTemplatesApi, pipelinesApi } from '../../api';
+import { useAuth, isOperator, isAdmin } from '../../contexts/AuthContext';
 import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
 
@@ -19,9 +19,9 @@ const InfluencerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const canEdit = isOperator(user);
-  const canViewPriceHistory = isOperator(user);
-  
+  const canEdit = isOperator(user) || isAdmin(user);
+  const canViewPriceHistory = isOperator(user) || isAdmin(user);
+
   const [loading, setLoading] = useState(true);
   const [influencer, setInfluencer] = useState(null);
   const [collaborations, setCollaborations] = useState([]);
@@ -29,6 +29,15 @@ const InfluencerDetail = () => {
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
   const [competitiveIntel, setCompetitiveIntel] = useState([]);
   const [competitiveIntelLoading, setCompetitiveIntelLoading] = useState(false);
+
+  // Pipeline
+  const [pipelineStatus, setPipelineStatus] = useState(null);
+  const [pipelineModalOpen, setPipelineModalOpen] = useState(false);
+  const [addPipelineStage, setAddPipelineStage] = useState('to_contact');
+  const [addPipelineOwnerId, setAddPipelineOwnerId] = useState('');
+  const [addPipelineNotes, setAddPipelineNotes] = useState('');
+  const [ownerOptions, setOwnerOptions] = useState([]);
+  const [pipelineSaving, setPipelineSaving] = useState(false);
   
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [templates, setTemplates] = useState([]);
@@ -46,13 +55,17 @@ const InfluencerDetail = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [infData, collabData] = await Promise.all([
+      const [infData, collabData, pipelineData, ownerData] = await Promise.all([
         influencersApi.getById(id),
-        collaborationsApi.getList({ influencer_id: id, page_size: 50 })
+        collaborationsApi.getList({ influencer_id: id, page_size: 50 }),
+        pipelinesApi.checkInfluencer(id).catch(() => null),
+        pipelinesApi.getOwnerOptions().catch(() => [])
       ]);
       setInfluencer(infData);
       setCollaborations(collabData.items);
-      
+      setPipelineStatus(pipelineData);
+      setOwnerOptions(ownerData || []);
+
       if (canViewPriceHistory) {
         fetchPriceHistory();
       }
@@ -216,6 +229,72 @@ const InfluencerDetail = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // ============ Pipeline Functions ============
+  const handleOpenAddPipeline = () => {
+    setAddPipelineStage('to_contact');
+    setAddPipelineOwnerId(user?.id ? String(user.id) : '');
+    setAddPipelineNotes('');
+    setPipelineModalOpen(true);
+  };
+
+  const handleClosePipelineModal = () => {
+    setPipelineModalOpen(false);
+    setAddPipelineStage('to_contact');
+    setAddPipelineOwnerId('');
+    setAddPipelineNotes('');
+  };
+
+  const handleAddToPipeline = async () => {
+    if (!influencer || !canEdit) return;
+    try {
+      setPipelineSaving(true);
+      const createData = {
+        influencer_id: influencer.id,
+        stage: addPipelineStage
+      };
+      if (addPipelineOwnerId) createData.owner_id = Number(addPipelineOwnerId);
+      if (addPipelineNotes) createData.notes = addPipelineNotes;
+
+      await pipelinesApi.create(createData);
+      showToast('success', `${influencer.name} 已成功纳入 Pipeline`);
+
+      // Refresh pipeline status
+      const newStatus = await pipelinesApi.checkInfluencer(id);
+      setPipelineStatus(newStatus);
+
+      handleClosePipelineModal();
+    } catch (error) {
+      console.error('Failed to add to pipeline:', error);
+      if (error.response?.data?.detail) {
+        showToast('error', error.response.data.detail);
+      }
+    } finally {
+      setPipelineSaving(false);
+    }
+  };
+
+  const getStageColor = (stage) => {
+    const colorMap = {
+      to_contact: '#6b7280',
+      communicating: '#3b82f6',
+      quote_confirmed: '#f59e0b',
+      signed: '#10b981',
+      abandoned: '#ef4444'
+    };
+    return colorMap[stage] || '#6b7280';
+  };
+
+  const getStageIcon = (stage) => {
+    const iconMap = {
+      to_contact: '📋',
+      communicating: '💬',
+      quote_confirmed: '💰',
+      signed: '✅',
+      abandoned: '❌'
+    };
+    return iconMap[stage] || '📋';
   };
 
   const buildChartData = () => {
@@ -424,6 +503,112 @@ const InfluencerDetail = () => {
               <div className="detail-stat-label">合作次数</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Pipeline Status Card */}
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <div className="card-body">
+          {pipelineStatus?.in_pipeline ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flex: 1,
+                minWidth: '200px'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  backgroundColor: getStageColor(pipelineStatus.stage) + '15'
+                }}>
+                  {getStageIcon(pipelineStatus.stage)}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Pipeline 跟进状态
+                  </div>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '3px 12px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    backgroundColor: getStageColor(pipelineStatus.stage) + '15',
+                    color: getStageColor(pipelineStatus.stage),
+                    border: '1px solid ' + getStageColor(pipelineStatus.stage) + '30'
+                  }}>
+                    {pipelineStatus.stage_label || pipelineStatus.stage}
+                  </div>
+                  {pipelineStatus.owner_name && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      负责人：{pipelineStatus.owner_name}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate('/pipeline')}
+              >
+                📊 查看 Pipeline 看板
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flex: 1,
+                minWidth: '200px'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  backgroundColor: 'var(--bg-tertiary)'
+                }}>
+                  📋
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Pipeline 跟进状态
+                  </div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: 'var(--text-tertiary)'
+                  }}>
+                    尚未纳入跟进漏斗
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                    纳入后可在 Pipeline 看板中跟踪商务拓展全流程
+                  </div>
+                </div>
+              </div>
+              {canEdit && influencer?.status === 'active' && (
+                <button
+                  className="btn btn-primary btn-lg"
+                  onClick={handleOpenAddPipeline}
+                >
+                  ➕ 纳入跟进
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1052,6 +1237,111 @@ const InfluencerDetail = () => {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Add to Pipeline Modal */}
+      <Modal
+        isOpen={pipelineModalOpen}
+        onClose={handleClosePipelineModal}
+        title="📊 纳入跟进 Pipeline"
+        size="medium"
+        footer={
+          <>
+            <button className="btn btn-ghost" onClick={handleClosePipelineModal}>取消</button>
+            <button
+              className="btn btn-primary"
+              onClick={handleAddToPipeline}
+              disabled={pipelineSaving || !canEdit}
+            >
+              {pipelineSaving ? '添加中...' : '➕ 加入 Pipeline'}
+            </button>
+          </>
+        }
+      >
+        {influencer && (
+          <>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              padding: '16px',
+              background: 'var(--bg-tertiary)',
+              borderRadius: '10px',
+              marginBottom: '24px'
+            }}>
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--primary-color), #4fc3f7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: '700',
+                fontSize: '20px',
+                flexShrink: 0
+              }}>
+                {influencer.name?.[0] || '?'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '6px' }}>
+                  {influencer.name}
+                </div>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '13px', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
+                  <span className="tag tag-primary">{influencer.platform}</span>
+                  <span>粉丝 {formatNumber(influencer.followers)}</span>
+                  <span>{formatMoney(influencer.cost_per_post)}/条</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '16px'
+            }}>
+              <div className="form-group">
+                <label className="form-label">初始阶段</label>
+                <select
+                  className="form-select"
+                  value={addPipelineStage}
+                  onChange={(e) => setAddPipelineStage(e.target.value)}
+                >
+                  <option value="to_contact">📋 待联系</option>
+                  <option value="communicating">💬 沟通中</option>
+                  <option value="quote_confirmed">💰 报价确认</option>
+                  <option value="signed">✅ 已签约</option>
+                  <option value="abandoned">❌ 已放弃</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">负责人</label>
+                <select
+                  className="form-select"
+                  value={addPipelineOwnerId}
+                  onChange={(e) => setAddPipelineOwnerId(e.target.value)}
+                >
+                  <option value="">未指派</option>
+                  {ownerOptions.map(o => (
+                    <option key={o.id} value={o.id}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">初始备注（可选）</label>
+              <textarea
+                className="form-textarea"
+                rows={4}
+                placeholder="记录合作意向、关注点、初步报价等..."
+                value={addPipelineNotes}
+                onChange={(e) => setAddPipelineNotes(e.target.value)}
+              />
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );
