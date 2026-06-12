@@ -52,17 +52,43 @@ api.interceptors.response.use(
     let message = '请求失败，请稍后重试';
     let shouldShowError = true;
     
+    const extractErrorMessage = (detail) => {
+      if (!detail) return '';
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail.map(item => {
+          if (typeof item === 'string') return item;
+          if (item.msg) return item.msg;
+          if (item.message) return item.message;
+          return JSON.stringify(item);
+        }).join('; ');
+      }
+      if (typeof detail === 'object') {
+        if (detail.msg) return detail.msg;
+        if (detail.message) return detail.message;
+        if (detail.error) return extractErrorMessage(detail.error);
+        return Object.values(detail).map(v => extractErrorMessage(v)).filter(Boolean).join('; ');
+      }
+      return String(detail);
+    };
+
     if (error.response) {
       const { status, data } = error.response;
       
       // Get error message from response
       if (data && data.detail) {
-        message = data.detail;
+        message = extractErrorMessage(data.detail);
+      } else if (data && typeof data === 'object') {
+        const objMsg = extractErrorMessage(data);
+        message = objMsg || `请求失败 (${status})`;
       } else {
         // Default messages based on status code
         switch (status) {
           case 400:
             message = '请求参数错误';
+            break;
+          case 422:
+            message = '请求参数验证失败';
             break;
           case 401:
             // Clear token and redirect to login silently

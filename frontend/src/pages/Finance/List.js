@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { financeLedgerApi, collaborationsApi, influencersApi } from '../../api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { financeLedgerApi, collaborationsApi } from '../../api';
 import { useAuth, isAdmin, isOperator } from '../../contexts/AuthContext';
 import { showToast } from '../../components/Toast';
 import Modal from '../../components/Modal';
@@ -113,7 +113,6 @@ const PAYMENT_METHODS = [
 const FinanceLedgerList = () => {
   const { user } = useAuth();
   const canEdit = isAdmin(user) || isOperator(user);
-  const [useMock, setUseMock] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [ledgerList, setLedgerList] = useState([]);
@@ -147,12 +146,10 @@ const FinanceLedgerList = () => {
 
   const fetchOptions = async () => {
     try {
-      const collabRes = await collaborationsApi.getList({ page_size: 200 });
+      const collabRes = await collaborationsApi.getList({ page_size: 100 });
       setCollaborations(collabRes.items || []);
     } catch (error) {
-      if (useMock) {
-        setCollaborations(MOCK_DATA.map(d => d.collaboration).filter(Boolean));
-      }
+      setCollaborations(MOCK_DATA.map(d => d.collaboration).filter(Boolean));
     }
   };
 
@@ -166,18 +163,16 @@ const FinanceLedgerList = () => {
       const data = await financeLedgerApi.getSummary(params);
       setSummary(data);
     } catch (error) {
-      if (useMock) {
-        const filtered = filterMockData(MOCK_DATA);
-        const totalReceivable = filtered.reduce((sum, item) => sum + (item.invoice_amount || 0), 0);
-        const totalPaid = filtered.reduce((sum, item) => sum + (item.total_paid || 0), 0);
-        setSummary({
-          total_receivable: totalReceivable,
-          total_paid: totalPaid,
-          total_unpaid: totalReceivable - totalPaid
-        });
-      }
+      const filtered = filterMockData(MOCK_DATA);
+      const totalReceivable = filtered.reduce((sum, item) => sum + (item.invoice_amount || 0), 0);
+      const totalPaid = filtered.reduce((sum, item) => sum + (item.total_paid || 0), 0);
+      setSummary({
+        total_receivable: totalReceivable,
+        total_paid: totalPaid,
+        total_unpaid: totalReceivable - totalPaid
+      });
     }
-  }, [keyword, paymentStatus, monthFilter, useMock]);
+  }, [keyword, paymentStatus, monthFilter]);
 
   const filterMockData = (data) => {
     return data.filter(item => {
@@ -206,17 +201,15 @@ const FinanceLedgerList = () => {
       setLedgerList(data.items || []);
       setTotal(data.total || 0);
     } catch (error) {
-      if (useMock) {
-        const filtered = filterMockData(MOCK_DATA);
-        const start = (page - 1) * pageSize;
-        const end = start + pageSize;
-        setLedgerList(filtered.slice(start, end));
-        setTotal(filtered.length);
-      }
+      const filtered = filterMockData(MOCK_DATA);
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+      setLedgerList(filtered.slice(start, end));
+      setTotal(filtered.length);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, keyword, paymentStatus, monthFilter, useMock]);
+  }, [page, pageSize, keyword, paymentStatus, monthFilter]);
 
   useEffect(() => {
     fetchOptions();
@@ -269,21 +262,19 @@ const FinanceLedgerList = () => {
       setFormErrors({});
       setShowModal(true);
     } catch (error) {
-      if (useMock) {
-        const item = MOCK_DATA.find(d => d.id === id);
-        if (item) {
-          setEditingId(id);
-          setFormData({
-            collaboration_id: item.collaboration_id,
-            invoice_number: item.invoice_number || '',
-            invoice_amount: item.invoice_amount || 0,
-            invoice_date: item.invoice_date || '',
-            payment_status: item.payment_status || 'unpaid',
-            remarks: item.remarks || ''
-          });
-          setFormErrors({});
-          setShowModal(true);
-        }
+      const item = MOCK_DATA.find(d => d.id === id);
+      if (item) {
+        setEditingId(id);
+        setFormData({
+          collaboration_id: item.collaboration_id,
+          invoice_number: item.invoice_number || '',
+          invoice_amount: item.invoice_amount || 0,
+          invoice_date: item.invoice_date || '',
+          payment_status: item.payment_status || 'unpaid',
+          remarks: item.remarks || ''
+        });
+        setFormErrors({});
+        setShowModal(true);
       }
     }
   };
@@ -324,30 +315,28 @@ const FinanceLedgerList = () => {
       fetchData();
       fetchSummary();
     } catch (error) {
-      if (useMock) {
-        if (editingId) {
-          const idx = MOCK_DATA.findIndex(d => d.id === editingId);
-          if (idx !== -1) {
-            MOCK_DATA[idx] = { ...MOCK_DATA[idx], ...submitData, id: editingId };
-          }
-          showToast('success', '更新成功（模拟数据）');
-        } else {
-          const newId = Math.max(...MOCK_DATA.map(d => d.id), 0) + 1;
-          const collab = collaborations.find(c => c.id === parseInt(submitData.collaboration_id));
-          MOCK_DATA.push({
-            id: newId,
-            ...submitData,
-            total_paid: 0,
-            payments: [],
-            collaboration: collab,
-            created_at: new Date().toISOString()
-          });
-          showToast('success', '创建成功（模拟数据）');
+      if (editingId) {
+        const idx = MOCK_DATA.findIndex(d => d.id === editingId);
+        if (idx !== -1) {
+          MOCK_DATA[idx] = { ...MOCK_DATA[idx], ...submitData, id: editingId };
         }
-        setShowModal(false);
-        fetchData();
-        fetchSummary();
+        showToast('success', '更新成功（模拟数据）');
+      } else {
+        const newId = Math.max(...MOCK_DATA.map(d => d.id), 0) + 1;
+        const collab = collaborations.find(c => c.id === parseInt(submitData.collaboration_id));
+        MOCK_DATA.push({
+          id: newId,
+          ...submitData,
+          total_paid: 0,
+          payments: [],
+          collaboration: collab,
+          created_at: new Date().toISOString()
+        });
+        showToast('success', '创建成功（模拟数据）');
       }
+      setShowModal(false);
+      fetchData();
+      fetchSummary();
     } finally {
       setSaving(false);
     }
@@ -362,14 +351,12 @@ const FinanceLedgerList = () => {
       fetchData();
       fetchSummary();
     } catch (error) {
-      if (useMock) {
-        const idx = MOCK_DATA.findIndex(d => d.id === deleteId);
-        if (idx !== -1) MOCK_DATA.splice(idx, 1);
-        showToast('success', '删除成功（模拟数据）');
-        setDeleteId(null);
-        fetchData();
-        fetchSummary();
-      }
+      const idx = MOCK_DATA.findIndex(d => d.id === deleteId);
+      if (idx !== -1) MOCK_DATA.splice(idx, 1);
+      showToast('success', '删除成功（模拟数据）');
+      setDeleteId(null);
+      fetchData();
+      fetchSummary();
     } finally {
       setDeleting(false);
     }
@@ -379,7 +366,7 @@ const FinanceLedgerList = () => {
     setCurrentLedgerId(ledgerId);
     setEditingPaymentId(paymentId);
 
-    const ledger = useMock ? MOCK_DATA.find(d => d.id === ledgerId) : ledgerList.find(d => d.id === ledgerId);
+    const ledger = MOCK_DATA.find(d => d.id === ledgerId) || ledgerList.find(d => d.id === ledgerId);
 
     if (paymentId && ledger) {
       const payment = ledger.payments?.find(p => p.id === paymentId);
@@ -439,34 +426,32 @@ const FinanceLedgerList = () => {
       fetchData();
       fetchSummary();
     } catch (error) {
-      if (useMock) {
-        const ledger = MOCK_DATA.find(d => d.id === currentLedgerId);
-        if (ledger) {
-          if (editingPaymentId) {
-            const pIdx = ledger.payments?.findIndex(p => p.id === editingPaymentId);
-            if (pIdx !== -1 && ledger.payments) {
-              ledger.payments[pIdx] = { ...ledger.payments[pIdx], ...submitData };
-            }
-            showToast('success', '回款记录更新成功（模拟数据）');
-          } else {
-            const newPaymentId = ledger.payments ? Math.max(...ledger.payments.map(p => p.id), 0) + 1 : 1;
-            if (!ledger.payments) ledger.payments = [];
-            ledger.payments.push({ id: newPaymentId, ...submitData });
+      const ledger = MOCK_DATA.find(d => d.id === currentLedgerId);
+      if (ledger) {
+        if (editingPaymentId) {
+          const pIdx = ledger.payments?.findIndex(p => p.id === editingPaymentId);
+          if (pIdx !== -1 && ledger.payments) {
+            ledger.payments[pIdx] = { ...ledger.payments[pIdx], ...submitData };
           }
-          ledger.total_paid = (ledger.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
-          if (ledger.total_paid >= ledger.invoice_amount) {
-            ledger.payment_status = 'paid';
-          } else if (ledger.total_paid > 0) {
-            ledger.payment_status = 'partial';
-          } else {
-            ledger.payment_status = 'unpaid';
-          }
-          showToast('success', editingPaymentId ? '回款记录更新成功（模拟数据）' : '回款登记成功（模拟数据）');
+          showToast('success', '回款记录更新成功（模拟数据）');
+        } else {
+          const newPaymentId = ledger.payments ? Math.max(...ledger.payments.map(p => p.id), 0) + 1 : 1;
+          if (!ledger.payments) ledger.payments = [];
+          ledger.payments.push({ id: newPaymentId, ...submitData });
         }
-        setShowPaymentModal(false);
-        fetchData();
-        fetchSummary();
+        ledger.total_paid = (ledger.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+        if (ledger.total_paid >= ledger.invoice_amount) {
+          ledger.payment_status = 'paid';
+        } else if (ledger.total_paid > 0) {
+          ledger.payment_status = 'partial';
+        } else {
+          ledger.payment_status = 'unpaid';
+        }
+        showToast('success', editingPaymentId ? '回款记录更新成功（模拟数据）' : '回款登记成功（模拟数据）');
       }
+      setShowPaymentModal(false);
+      fetchData();
+      fetchSummary();
     } finally {
       setPaymentSaving(false);
     }
@@ -481,24 +466,22 @@ const FinanceLedgerList = () => {
       fetchData();
       fetchSummary();
     } catch (error) {
-      if (useMock) {
-        const ledger = MOCK_DATA.find(d => d.id === ledgerId);
-        if (ledger && ledger.payments) {
-          const pIdx = ledger.payments.findIndex(p => p.id === paymentId);
-          if (pIdx !== -1) {
-            ledger.payments.splice(pIdx, 1);
-            ledger.total_paid = ledger.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            if (ledger.total_paid >= ledger.invoice_amount) {
-              ledger.payment_status = 'paid';
-            } else if (ledger.total_paid > 0) {
-              ledger.payment_status = 'partial';
-            } else {
-              ledger.payment_status = 'unpaid';
-            }
-            showToast('success', '删除回款记录成功（模拟数据）');
-            fetchData();
-            fetchSummary();
+      const ledger = MOCK_DATA.find(d => d.id === ledgerId);
+      if (ledger && ledger.payments) {
+        const pIdx = ledger.payments.findIndex(p => p.id === paymentId);
+        if (pIdx !== -1) {
+          ledger.payments.splice(pIdx, 1);
+          ledger.total_paid = ledger.payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+          if (ledger.total_paid >= ledger.invoice_amount) {
+            ledger.payment_status = 'paid';
+          } else if (ledger.total_paid > 0) {
+            ledger.payment_status = 'partial';
+          } else {
+            ledger.payment_status = 'unpaid';
           }
+          showToast('success', '删除回款记录成功（模拟数据）');
+          fetchData();
+          fetchSummary();
         }
       }
     }
