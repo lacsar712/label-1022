@@ -37,6 +37,7 @@ const Layout = () => {
     if (path.startsWith('/influencers')) return 'Influencer管理';
     if (path === '/pipeline') return '触达Pipeline';
     if (path.startsWith('/collaborations')) return '合作管理';
+    if (path.startsWith('/content-calendar')) return '内容排期日历';
     if (path.startsWith('/finance')) return '财务台账';
     if (path.startsWith('/competitive-intelligence')) return '竞品情报';
     if (path.startsWith('/categories')) return '分类管理';
@@ -62,6 +63,7 @@ const Layout = () => {
         { path: '/pipeline', icon: '📊', label: '触达Pipeline', roles: ['admin', 'operator', 'user'] },
         { path: '/influencers', icon: '👤', label: 'Influencer管理', roles: ['admin', 'operator', 'user'] },
         { path: '/collaborations', icon: '🤝', label: '合作管理', roles: ['admin', 'operator', 'user'] },
+        { path: '/content-calendar', icon: '📅', label: '内容排期日历', roles: ['admin', 'operator', 'user'] },
         { path: '/finance', icon: '💰', label: '财务台账', roles: ['admin', 'operator'] },
         { path: '/competitive-intelligence', icon: '🔍', label: '竞品情报', roles: ['admin', 'operator', 'user'] },
         { path: '/categories', icon: '📁', label: '分类管理', roles: ['admin', 'operator'] },

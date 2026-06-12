@@ -21,6 +21,7 @@ import BrandInfluencers from './pages/Brand/Influencers';
 import OperatorKPIDashboard from './pages/Operator/KPIDashboard';
 import FinanceLedgerList from './pages/Finance/List';
 import CompetitiveIntelligenceList from './pages/CompetitiveIntelligence/List';
+import ContentCalendar from './pages/ContentCalendar/Index';
 import Toast from './components/Toast';
 
 const ProtectedRoute = ({ children, roles }) => {
@@ -125,6 +126,11 @@ const AppRoutes = () => {
         <Route path="/competitive-intelligence" element={
           <ProtectedRoute roles={['admin', 'operator', 'user']}>
             <CompetitiveIntelligenceList />
+          </ProtectedRoute>
+        } />
+        <Route path="/content-calendar" element={
+          <ProtectedRoute roles={['admin', 'operator', 'user']}>
+            <ContentCalendar />
           </ProtectedRoute>
         } />
         <Route path="/profile" element={<Profile />} />

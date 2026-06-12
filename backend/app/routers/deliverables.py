@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
+from datetime import datetime, date
 from ..database import get_db
 from ..models.deliverable import ContentDeliverable
 from ..models.collaboration import Collaboration
@@ -9,9 +10,12 @@ from ..schemas.deliverable import (
     DeliverableCreate,
     DeliverableUpdate,
     DeliverableResponse,
-    DeliverableListResponse
+    DeliverableListResponse,
+    CalendarDeliverableListResponse,
+    CalendarDeliverableItem,
+    CalendarCollaborationInfo
 )
-from ..utils.security import get_current_user, get_operator_or_admin
+from ..utils.security import get_current_user, get_operator_or_admin, is_brand_user
 from ..utils.logger import logger
 
 router = APIRouter(prefix="/api/deliverables", tags=["内容交付物"])
@@ -123,3 +127,53 @@ async def get_platforms(current_user: User = Depends(get_current_user)):
         {"value": "微信", "label": "微信"},
         {"value": "其他", "label": "其他"}
     ]
+
+
+@router.get("/calendar", response_model=CalendarDeliverableListResponse, summary="获取日历视图交付物")
+async def get_calendar_deliverables(
+    start_date: date = Query(..., description="开始日期"),
+    end_date: date = Query(..., description="结束日期"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    start_dt = datetime.combine(start_date, datetime.min.time())
+    end_dt = datetime.combine(end_date, datetime.max.time())
+
+    query = db.query(ContentDeliverable).join(
+        Collaboration, ContentDeliverable.collaboration_id == Collaboration.id
+    ).filter(
+        ContentDeliverable.published_at.isnot(None),
+        ContentDeliverable.published_at >= start_dt,
+        ContentDeliverable.published_at <= end_dt
+    )
+
+    if is_brand_user(current_user):
+        query = query.filter(Collaboration.user_id == current_user.id)
+
+    items = query.order_by(ContentDeliverable.published_at.asc()).all()
+
+    result_items = []
+    for item in items:
+        collab = item.collaboration
+        influencer = collab.influencer if collab else None
+
+        collab_info = CalendarCollaborationInfo(
+            id=collab.id if collab else 0,
+            project_name=collab.project_name if collab else "",
+            content_type=collab.content_type if collab else None,
+            influencer_name=influencer.name if influencer else None,
+            influencer_platform=influencer.platform if influencer else None
+        )
+
+        result_items.append(CalendarDeliverableItem(
+            id=item.id,
+            collaboration_id=item.collaboration_id,
+            platform=item.platform,
+            content_link=item.content_link,
+            published_at=item.published_at,
+            review_status=item.review_status,
+            notes=item.notes,
+            collaboration=collab_info
+        ))
+
+    return CalendarDeliverableListResponse(items=result_items, total=len(result_items))

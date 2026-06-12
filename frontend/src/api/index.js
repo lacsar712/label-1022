@@ -178,7 +178,8 @@ export const deliverablesApi = {
   update: (id, data) => api.put(`/deliverables/${id}`, data),
   delete: (id) => api.delete(`/deliverables/${id}`),
   getReviewStatuses: () => api.get('/deliverables/review-statuses'),
-  getPlatforms: () => api.get('/deliverables/platforms')
+  getPlatforms: () => api.get('/deliverables/platforms'),
+  getCalendar: (startDate, endDate) => api.get('/deliverables/calendar', { params: { start_date: startDate, end_date: endDate } })
 };
 
 // Statistics API
